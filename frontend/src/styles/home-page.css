@@ -5,27 +5,10 @@
     padding: 24px;
     height: 100vh;
     box-sizing: border-box;
-    background-color: #0d1117; /* High-tech dark background */
 }
 
-/* This forces exactly 3 columns that share space equally */
+/* Make child components fill available space equally */
 #home-page > * {
     flex: 1;
-    min-width: 0;
-    height: 100%;
-}
-
-/* Ensure your voice button looks like the one in the team's image */
-.record-btn {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.record-btn.recording {
-    background: #ef4444;
+    min-height: 0;  /* Important for flex children with overflow */
 }

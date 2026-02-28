@@ -1,3 +1,38 @@
+/* ...existing code... */
+
+:root,
+[data-theme="dark"] {
+    --app-bg: #111827;
+    --panel-bg: #1f2937;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --button-bg: #374151;
+}
+
+[data-theme="light"] {
+    --app-bg: #f9fafb;
+    --panel-bg: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --border-color: #d1d5db;
+    --button-bg: #e5e7eb;
+}
+
+[data-theme="cream"] {
+    --app-bg: #f8f4ea;
+    --panel-bg: #fffaf0;
+    --text-primary: #2f2a22;
+    --text-secondary: #5f5548;
+    --border-color: #d8cbb4;
+    --button-bg: #efe3cd;
+}
+
+body {
+    background: var(--app-bg);
+    color: var(--text-primary);
+}
+
 :root {
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;

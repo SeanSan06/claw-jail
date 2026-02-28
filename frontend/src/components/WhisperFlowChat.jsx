@@ -3,12 +3,13 @@ import { useState, useRef } from 'react';
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
     const [isListening, setIsListening] = useState(false);
+    // NEW: We added a processing state so you know when the AI is thinking!
+    const [isProcessing, setIsProcessing] = useState(false); 
     
     const textareaRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
 
-    // 1. Handles the user typing or editing the text box
     const handleInputChange = (e) => {
         setInput(e.target.value);
         if (textareaRef.current) {
@@ -17,7 +18,6 @@ function WhisperFlowChat() {
         }
     };
 
-    // 2. Turns on the mic and starts recording
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -41,7 +41,6 @@ function WhisperFlowChat() {
         }
     };
 
-    // 3. Stops the mic
     const stopRecording = () => {
         if (mediaRecorderRef.current) {
             mediaRecorderRef.current.stop();
@@ -58,8 +57,8 @@ function WhisperFlowChat() {
         }
     };
 
-    // 4. Sends audio to the backend (Faster Whisper + Fuzzy Search)
     const sendAudioToBackend = async (blob) => {
+        setIsProcessing(true); // Tell the UI we are thinking...
         const formData = new FormData();
         formData.append('file', blob, 'command.wav');
 
@@ -70,26 +69,29 @@ function WhisperFlowChat() {
             });
 
             const data = await response.json();
+            console.log("Backend Result:", data); // Check your browser console to see this!
             
-            // 5. Put the translated text directly into the text box!
+            // Put the translated text directly into the text box
             if (data.transcript) {
-                setInput(data.transcript); // This puts it in the box for the user to review
+                setInput(data.transcript); 
                 
                 if (textareaRef.current) {
                     textareaRef.current.style.height = 'auto';
                     textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
                 }
+            } else if (data.status === "empty") {
+                // If the room was too noisy and it couldn't hear you
+                setInput("Could not hear you over the noise. Please try again.");
             }
             
-            // We can log the fuzzy match to the console just to prove to your teammates it works
-            console.log("Backend Result:", data);
-            
         } catch (error) {
-            console.error("Upload failed:", error);
+            console.error("Upload failed. Is the Python backend running?", error);
+            setInput("Error connecting to backend.");
+        } finally {
+            setIsProcessing(false); // Done thinking!
         }
     };
 
-    // 6. When the user manually clicks "Send"
     const handleSend = () => {
         if (input.trim()) {
             console.log("User clicked send! Final text:", input);
@@ -98,13 +100,17 @@ function WhisperFlowChat() {
             // Hey teammates! Pass the 'input' variable to the bot agent here!
             // ---------------------------------------------------------
             
-            // Clear the input box after sending
             setInput('');
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto';
             }
         }
     };
+
+    // Determine what the button should say
+    let buttonText = '🎙️ Voice Input';
+    if (isProcessing) buttonText = '⏳ Processing...';
+    else if (isListening) buttonText = '🛑 Stop Listening';
 
     return (
         <div id="whisper-flow-chat-area">
@@ -117,17 +123,19 @@ function WhisperFlowChat() {
                     onChange={handleInputChange}
                     placeholder="Type or speak your command here..."
                     rows="1"
+                    disabled={isProcessing} // Disable typing while processing
                 />
 
                 <div id="button-row">
                     <button 
                         onClick={handleVoiceInput}
                         className={isListening ? 'listening' : ''}
+                        disabled={isProcessing} // Disable mic button while processing
                     >
-                        {isListening ? '🛑 Stop Listening' : '🎙️ Voice Input'}
+                        {buttonText}
                     </button>
 
-                    <button onClick={handleSend}>Send</button>
+                    <button onClick={handleSend} disabled={isProcessing}>Send</button>
                 </div>
             </div>
         </div>
@@ -135,4 +143,3 @@ function WhisperFlowChat() {
 }
 
 export default WhisperFlowChat;
-

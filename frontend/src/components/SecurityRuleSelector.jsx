@@ -2,7 +2,7 @@
 // For example, we can have a safe, flexible, and aggressive mode. 
 // Each mode will have different settings for the bot, and will change how the bot 
 // behaves in certain situations.
-function ModeSelector() {
+function SecurityRuleSelector() {
     return  (
         <div>
             <Form />
@@ -10,4 +10,4 @@ function ModeSelector() {
     );
 }
 
-export default ModeSelector;
+export default SecurityRuleSelector;

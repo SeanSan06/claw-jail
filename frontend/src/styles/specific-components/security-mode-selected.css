@@ -9,12 +9,14 @@
     gap: 12px;
     height: 100%;
     box-sizing: border-box;
+    overflow-y: auto;
 }
 
 #security-modes-selected-area h2 {
     margin: 0 0 8px 0;
     color: #f3f4f6;
     font-size: 18px;
+    flex-shrink: 0;
 }
 
 /* Individual mode cards indication */

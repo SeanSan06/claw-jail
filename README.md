@@ -13,3 +13,20 @@ The Security Pipeline
 5. The Shim will push every intended action towards the security dashboard, where it logs information. The security dashboard will then add a security rule to prevent the command from doing something its not suppose to do. An IT Manager will overlook this whole process with the Shim and the security dashboard. IT Manager will modify security dashboard as needed.. 
 6. Finally, once the action passes the gateway and the human-governed security rules, it finally reaches the Bash terminal for the final execution of running the command. 
 
+## Frontend Setup & Development (React + Vite)
+### Installing Dependencies
+To install all frontend dependencies, navigate to the frontend directory and run:
+
+```bash
+cd frontend
+npm install
+```
+
+### Running the Development Server
+Start the local development server with:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173` (Vite's default port).

@@ -2,7 +2,7 @@
 // into certain commands that the bot can understand. This will be the one way 
 // that users interact with the bot, and will be the most important component of 
 // the frontend.
-function WhisperFlow() {
+function WhisperFlowChat() {
     return  (
         <div>
             <Form />
@@ -10,4 +10,4 @@ function WhisperFlow() {
     );
 }
 
-export default WhisperFlow;
+export default WhisperFlowChat;

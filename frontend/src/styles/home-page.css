@@ -1,31 +1,31 @@
 #home-page {
     display: flex;
     flex-direction: row;
-    gap: 20px;
+    gap: 24px;
     padding: 24px;
     height: 100vh;
     box-sizing: border-box;
-    background-color: #0d1117; /* Matches the dark theme in the team's images */
-    overflow: hidden;
+    background-color: #0d1117; /* High-tech dark background */
 }
 
-/* This makes sure all 4 columns stay equal and don't shrink too much */
+/* This forces exactly 3 columns that share space equally */
 #home-page > * {
     flex: 1;
-    min-width: 250px; 
+    min-width: 0;
     height: 100%;
-    min-height: 0;
 }
 
-/* Styling for your specific voice wrapper to match their cards */
-.voice-control-wrapper {
-    background: #1f2937;
-    border-radius: 8px;
-    border: 1px solid #374151;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+/* Ensure your voice button looks like the one in the team's image */
+.record-btn {
+    background: #3b82f6;
     color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.record-btn.recording {
+    background: #ef4444;
 }

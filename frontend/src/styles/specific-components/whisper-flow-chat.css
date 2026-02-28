@@ -1,0 +1,94 @@
+/* Chat box area */
+#whisper-flow-chat {
+    background: #1f2937;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 600px;
+}
+
+#whisper-flow-chat h2 {
+    margin: 0 0 12px 0;
+    color: #f3f4f6;
+    font-size: 18px;
+}
+
+#chat-container {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding: 8px;
+    background: #111827;
+    border-radius: 6px;
+    border: 1px solid #374151;
+}
+
+/* Input box area */
+#input-container {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+#input-container textarea {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    background: #111827;
+    color: #f3f4f6;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    resize: none;
+    max-height: 120px;
+    overflow-y: auto;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+    #input-container textarea:focus {
+        border-color: #3b82f6;
+    }
+
+    #input-container textarea::placeholder {
+        color: #6b7280;
+    }
+
+/* Buttons for sending message and toggling voice input */
+#input-container button {
+    padding: 10px 16px;
+    background: #3b82f6;
+    color: #f3f4f6;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+
+    #input-container button:hover {
+        background: #2563eb;
+    }
+
+    #input-container button:active {
+        background: #1d4ed8;
+    }
+
+    #input-container button.listening {
+        background: #ef4444;
+        animation: pulse 1s infinite;
+    }
+
+    #input-container button.listening:hover {
+        background: #dc2626;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }

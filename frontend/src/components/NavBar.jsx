@@ -1,14 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 function NavBar() {
     const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
     const [theme, setTheme] = useState("dark");
+    const [modalPosition, setModalPosition] = useState({ top: 0, right: 0 });
+    const themeBtnRef = useRef(null);
 
     useEffect(() => {
         const savedTheme = localStorage.getItem("claw-jail-theme") || "dark";
         setTheme(savedTheme);
         document.documentElement.setAttribute("data-theme", savedTheme);
     }, []);
+
+    const handleThemeButtonClick = () => {
+        if (themeBtnRef.current) {
+            const rect = themeBtnRef.current.getBoundingClientRect();
+            setModalPosition({
+                top: rect.bottom + 8,
+                right: window.innerWidth - rect.right
+            });
+        }
+        setIsThemeModalOpen(true);
+    };
 
     const handleThemeChange = (nextTheme) => {
         setTheme(nextTheme);
@@ -25,9 +38,10 @@ function NavBar() {
                     <button id="refresh-btn" title="Refresh data">🔄 Refresh</button>
                     <button id="settings-btn" title="Settings">⚙️ Settings</button>
                     <button
+                        ref={themeBtnRef}
                         id="theme-btn"
                         title="Theme"
-                        onClick={() => setIsThemeModalOpen(true)}
+                        onClick={handleThemeButtonClick}
                     >
                         🎨 Theme
                     </button>
@@ -49,6 +63,11 @@ function NavBar() {
                         aria-modal="true"
                         aria-label="Select theme"
                         onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'fixed',
+                            top: `${modalPosition.top}px`,
+                            right: `${modalPosition.right}px`
+                        }}
                     >
                         <h3>Select Theme</h3>
                         <div className="theme-options">

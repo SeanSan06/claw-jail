@@ -5,10 +5,11 @@
     padding: 24px;
     height: 100vh;
     box-sizing: border-box;
+    background: var(--app-bg);
 }
 
 /* NavBar stays at the top */
-#home-page > nav {
+#home-page > #nav-bar {
     flex-shrink: 0;
 }
 

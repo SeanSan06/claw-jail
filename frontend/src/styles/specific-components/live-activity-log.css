@@ -1,7 +1,7 @@
 .live-activity-log {
-    background: #1f2937;
+    background: var(--panel-bg);
     border-radius: 8px;
-    border: 1px solid #374151;
+    border: 1px solid var(--border-color);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -10,7 +10,7 @@
 
 .log-header {
     padding: 16px;
-    border-bottom: 1px solid #374151;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -18,7 +18,7 @@
 
 .log-header h2 {
     margin: 0;
-    color: #f3f4f6;
+    color: var(--text-primary);
     font-size: 18px;
     font-weight: 600;
 }
@@ -27,7 +27,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #d1d5db;
+    color: var(--text-secondary);
     font-size: 12px;
     cursor: pointer;
 }
@@ -47,17 +47,17 @@
     grid-template-columns: 90px 1fr auto;
     gap: 12px;
     padding: 12px 16px;
-    border-bottom: 1px solid #2d3748;
+    border-bottom: 1px solid var(--border-subtle);
     align-items: center;
     transition: background-color 0.2s;
 }
 
 .log-entry:hover {
-    background: #2d3748;
+    background: var(--surface-bg);
 }
 
 .log-time {
-    color: #9ca3af;
+    color: var(--text-secondary);
     font-family: 'Courier New', monospace;
     font-weight: 500;
     font-size: 13px;
@@ -65,13 +65,13 @@
 }
 
 .log-action {
-    color: #f3f4f6;
+    color: var(--text-primary);
     font-size: 13px;
     word-break: break-word;
 }
 
 .log-row {
-    border-bottom: 1px solid #2d3748;
+    border-bottom: 1px solid var(--border-subtle);
     transition: background-color 0.2s;
 }
 .risk-badge {
@@ -101,9 +101,9 @@
 
 .log-footer {
     padding: 12px 16px;
-    border-top: 1px solid #374151;
-    background: #111827;
-    color: #9ca3af;
+    border-top: 1px solid var(--border-color);
+    background: var(--panel-bg-alt);
+    color: var(--text-secondary);
     font-size: 12px;
 }
 
@@ -112,14 +112,14 @@
 }
 
 .log-container::-webkit-scrollbar-track {
-    background: #1f2937;
+    background: var(--panel-bg);
 }
 
 .log-container::-webkit-scrollbar-thumb {
-    background: #4b5563;
+    background: var(--button-border);
     border-radius: 4px;
 }
 
 .log-container::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+    background: var(--text-secondary);
 }

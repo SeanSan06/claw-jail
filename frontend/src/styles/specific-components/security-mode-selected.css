@@ -1,8 +1,8 @@
-/* Securit modes selected area */
+/* Security modes selected area */
 #security-modes-selected-area {
-    background: #1f2937;
+    background: var(--panel-bg);
     border-radius: 8px;
-    border: 1px solid #374151;
+    border: 1px solid var(--border-color);
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -14,28 +14,28 @@
 
 #security-modes-selected-area h2 {
     margin: 0 0 8px 0;
-    color: #f3f4f6;
+    color: var(--text-primary);
     font-size: 18px;
     flex-shrink: 0;
 }
 
 /* Individual mode cards indication */
 #security-modes-selected-area > div[id^="security-mode-"] {
-    background: #111827;
-    border: 1px solid #374151;
+    background: var(--panel-bg-alt);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 12px;
     transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
     #security-modes-selected-area > div[id^="security-mode-"].active {
-        border-color: #10b981;
-        background: #0d3d2e;
+        border-color: var(--status-online);
+        background: color-mix(in srgb, var(--status-online) 20%, var(--panel-bg-alt));
     }
 
     #security-modes-selected-area > div[id^="security-mode-"].inactive {
         opacity: 0.7;
-        background: #1f2937;
+        background: var(--panel-bg);
     }
 
 /* Mode header with title and label */
@@ -48,14 +48,14 @@
 
 .mode-header h3 {
     margin: 0;
-    color: #f3f4f6;
+    color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
 }
 
 /* Active/Inactive labels */
 .active-label {
-    background: #10b981;
+    background: var(--status-online);
     color: white;
     padding: 4px 12px;
     border-radius: 12px;
@@ -65,7 +65,7 @@
 }
 
 .inactive-label {
-    background: #6b7280;
+    background: var(--text-secondary);
     color: white;
     padding: 4px 12px;
     border-radius: 12px;
@@ -77,7 +77,24 @@
 /* Mode description */
 #security-modes-selected-area > div[id^="security-mode-"] p {
     margin: 0;
-    color: #9ca3af;
+    color: var(--text-secondary);
     font-size: 14px;
     line-height: 1.5;
+}
+
+#security-modes-selected-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+#security-modes-selected-area::-webkit-scrollbar-track {
+    background: var(--panel-bg);
+}
+
+#security-modes-selected-area::-webkit-scrollbar-thumb {
+    background: var(--button-border);
+    border-radius: 4px;
+}
+
+#security-modes-selected-area::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }

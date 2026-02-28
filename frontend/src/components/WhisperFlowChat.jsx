@@ -15,6 +15,22 @@ function WhisperFlowChat() {
         }
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            if (e.ctrlKey || e.metaKey) {
+                // Ctrl/Cmd + Enter: allow newline (default behavior)
+                return;
+            } else if (e.shiftKey) {
+                // Shift + Enter: allow newline (default behavior)
+                return;
+            } else {
+                // Just Enter: send message
+                e.preventDefault();
+                handleSend();
+            }
+        }
+    };
+
     const handleSend = () => {
         if (input.trim()) {
             // Add user message
@@ -63,6 +79,7 @@ function WhisperFlowChat() {
                     ref={textareaRef}
                     value={input}
                     onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
                     placeholder="Type your command here..."
                     rows="1"
                 />

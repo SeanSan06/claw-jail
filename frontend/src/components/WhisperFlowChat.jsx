@@ -2,68 +2,120 @@ import { useState, useRef } from 'react';
 
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
-    const [messages, setMessages] = useState([]);
     const [isListening, setIsListening] = useState(false);
+    
     const textareaRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
 
+    // 1. Handles the user typing or editing the text box
     const handleInputChange = (e) => {
         setInput(e.target.value);
-        
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
         }
     };
 
+    // 2. Turns on the mic and starts recording
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+                await sendAudioToBackend(audioBlob);
+            };
+
+            mediaRecorderRef.current.start();
+            setIsListening(true);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            setIsListening(false);
+        }
+    };
+
+    // 3. Stops the mic
+    const stopRecording = () => {
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            setIsListening(false);
+        }
+    };
+
+    const handleVoiceInput = () => {
+        if (isListening) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
+
+    // 4. Sends audio to the backend (Faster Whisper + Fuzzy Search)
+    const sendAudioToBackend = async (blob) => {
+        const formData = new FormData();
+        formData.append('file', blob, 'command.wav');
+
+        try {
+            const response = await fetch('http://localhost:8000/api/voice-command', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+            
+            // 5. Put the translated text directly into the text box!
+            if (data.transcript) {
+                setInput(data.transcript); // This puts it in the box for the user to review
+                
+                if (textareaRef.current) {
+                    textareaRef.current.style.height = 'auto';
+                    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
+                }
+            }
+            
+            // We can log the fuzzy match to the console just to prove to your teammates it works
+            console.log("Backend Result:", data);
+            
+        } catch (error) {
+            console.error("Upload failed:", error);
+        }
+    };
+
+    // 6. When the user manually clicks "Send"
     const handleSend = () => {
         if (input.trim()) {
-            // Add user message
-            setMessages([...messages, { text: input, sender: 'user', timestamp: new Date() }]);
+            console.log("User clicked send! Final text:", input);
             
-            // Simulate bot response after a delay
-            // This gets the real time date using the Date object and formats it to show only hours and minutes
-            setTimeout(() => {
-                setMessages(prev => [...prev, { 
-                    text: 'Bot response will appear here', 
-                    sender: 'bot', 
-                    timestamp: new Date() 
-                }]);
-            }, 1000);
+            // ---------------------------------------------------------
+            // Hey teammates! Pass the 'input' variable to the bot agent here!
+            // ---------------------------------------------------------
             
+            // Clear the input box after sending
             setInput('');
-
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto';
             }
         }
     };
 
-    const handleVoiceInput = () => {
-        setIsListening(!isListening);
-        // TODO: Implement Web Speech API or call backend voice service
-        console.log('Voice input:', isListening ? 'stopped' : 'started');
-    };
-
     return (
         <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
-            <div id="chat-container">
-                {messages.map((msg, index) => (
-                    <div key={index} className={`message ${msg.sender}`}>
-                        <span className="message-text">{msg.text}</span>
-                        <span className="message-time">
-                            {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    </div>
-                ))}
-            </div>
-
-            <div id="input-container">
+            
+            <div id="input-container" style={{ marginTop: 'auto' }}>
                 <textarea
                     ref={textareaRef}
                     value={input}
                     onChange={handleInputChange}
-                    placeholder="Type your command here..."
+                    placeholder="Type or speak your command here..."
                     rows="1"
                 />
 
@@ -72,7 +124,7 @@ function WhisperFlowChat() {
                         onClick={handleVoiceInput}
                         className={isListening ? 'listening' : ''}
                     >
-                        {isListening ? '🎙️ Listening...' : '🎙️ Voice Input'}
+                        {isListening ? '🛑 Stop Listening' : '🎙️ Voice Input'}
                     </button>
 
                     <button onClick={handleSend}>Send</button>
@@ -83,3 +135,4 @@ function WhisperFlowChat() {
 }
 
 export default WhisperFlowChat;
+

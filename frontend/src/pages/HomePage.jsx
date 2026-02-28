@@ -11,18 +11,29 @@ function HomePage() {
                 <p className="dashboard-subtitle">AI Security Protocol Manager</p>
             </div>
 
-            <div id="home-page">
-                {/* The Team's new components */}
-                <LiveActivityLog />
+            <div className="dashboard-grid">
+                {/* 1. Live Logs */}
+                <div className="grid-item">
+                    <LiveActivityLog />
+                </div>
                 
-                {/* Your Voice Control */}
-                <div className="dashboard-card main-voice">
-                    <h2>Voice Control</h2>
-                    <WhisperFlow />
+                {/* 2. Your Voice Control */}
+                <div className="grid-item">
+                    <div className="dashboard-card main-voice">
+                        <h2>Voice Control</h2>
+                        <WhisperFlow />
+                    </div>
                 </div>
 
-                <WhisperFlowChat />
-                <SecurityModeSelected />
+                {/* 3. Chat Interface */}
+                <div className="grid-item">
+                    <WhisperFlowChat />
+                </div>
+
+                {/* 4. Security Modes */}
+                <div className="grid-item">
+                    <SecurityModeSelected />
+                </div>
             </div>
         </div>
     );

@@ -1,0 +1,19 @@
+{
+  "name": "openclaw-tool-call-logger",
+  "version": "1.0.0",
+  "description": "OpenClaw plugin that intercepts tool calls and prints them to the console",
+  "main": "index.ts",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "openclaw": "^2026.2.26",
+    "typescript": "^5.9.3"
+  }
+}

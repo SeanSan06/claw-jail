@@ -1,0 +1,27 @@
+:root {
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    font-synthesis: none;
+    text-rendering: optimizelegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: light dark;
+    color: var(--text-color);
+    background-color: var(--tinted-bg-color);
+}
+
+body, html, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#home-page {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    padding: 24px;
+    height: 100vh;
+    box-sizing: border-box;
+}

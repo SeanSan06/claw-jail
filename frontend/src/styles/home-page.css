@@ -7,7 +7,7 @@
     box-sizing: border-box;
 }
 
-/* Make child components fill available space */
+/* Make child components fill available space equally */
 #home-page > * {
     flex: 1;
     min-height: 0;  /* Important for flex children with overflow */

@@ -13,6 +13,8 @@ model = WhisperModel("tiny", device="cpu", compute_type="int8")
 # 2. THE COMMAND DICTIONARY
 # This is where you "mess with it." 
 # Left side = what you say. Right side = the code the system understands.
+
+#If needed we can always update a command, when adding a new feature
 COMMAND_MAP = {
     "activate safe mode": "MODE_SAFE",
     "go aggressive": "MODE_AGGRESSIVE",

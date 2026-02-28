@@ -36,7 +36,7 @@
         background: #1f2937;
     }
 
-/* Mode header with title and badge */
+/* Mode header with title and label */
 .mode-header {
     display: flex;
     justify-content: space-between;
@@ -51,8 +51,8 @@
     font-weight: 600;
 }
 
-/* Active/Inactive badges */
-.active-badge {
+/* Active/Inactive labels */
+.active-label {
     background: #10b981;
     color: white;
     padding: 4px 12px;
@@ -62,7 +62,7 @@
     flex-shrink: 0;
 }
 
-.inactive-badge {
+.inactive-label {
     background: #6b7280;
     color: white;
     padding: 4px 12px;

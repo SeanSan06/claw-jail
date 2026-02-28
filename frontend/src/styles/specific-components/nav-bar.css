@@ -87,6 +87,7 @@
 }
 
 #theme-btn {
+    position: relative;
     background: var(--button-bg);
     color: var(--text-primary);
     border: 1px solid var(--button-border);
@@ -111,15 +112,13 @@
 .theme-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: transparent;
     z-index: 999;
 }
 
 .theme-modal {
-    width: min(360px, 92vw);
+    position: fixed;
+    width: 200px;
     background: var(--panel-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
@@ -134,8 +133,8 @@
 }
 
 .theme-options {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     margin-bottom: 12px;
 }

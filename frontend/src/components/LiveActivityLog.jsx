@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import '../styles/specific-components/live-activity-logs.css';
 
 function LiveActivityLog() {
     const [logs, setLogs] = useState([]);

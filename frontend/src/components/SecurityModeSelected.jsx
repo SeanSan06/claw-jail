@@ -7,7 +7,7 @@ function SecurityModeSelected() {
     const activeMode = 'safe'; // This will be set based on user selection
 
     return  (
-        <div id="security-mode-selected-area">
+        <div id="security-modes-selected-area">
             <h2>Security Mode Selected</h2>
 
             <div id="security-mode-safe" className={activeMode === 'safe' ? 'active' : 'inactive'}>

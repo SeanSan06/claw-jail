@@ -1,9 +1,11 @@
 import LiveActivityLog from '../components/LiveActivityLog';
+import WhisperFlowChat from '../components/WhisperFlowChat';
 
 function HomePage() {
     return  (
-        <div>
+        <div id="home-page">
             <LiveActivityLog />
+            <WhisperFlowChat />
         </div>
     );
 }

@@ -33,7 +33,7 @@ function WhisperFlowChat() {
     };
 
     return (
-        <div id="whisper-flow-chat">
+        <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
             <div id="chat-container">
                 {/* Chat messages will display here as they are sent by user */}
@@ -49,7 +49,7 @@ function WhisperFlowChat() {
                 />
 
                 <button onClick={handleSend}>Send</button>
-                
+
                 <button 
                     onClick={handleVoiceInput}
                     className={isListening ? 'listening' : ''}

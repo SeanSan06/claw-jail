@@ -5,9 +5,9 @@ function WhisperFlowChat() {
     const [isListening, setIsListening] = useState(false);
     const textareaRef = useRef(null);
 
-    // Auto-expand textarea as user types
     const handleInputChange = (e) => {
         setInput(e.target.value);
+        
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
@@ -18,6 +18,7 @@ function WhisperFlowChat() {
         if (input.trim()) {
             console.log('Sending:', input);
             setInput('');
+
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto';
             }
@@ -27,6 +28,7 @@ function WhisperFlowChat() {
     const handleVoiceInput = () => {
         setIsListening(!isListening);
         // TODO: Implement Web Speech API or call backend voice service
+        // We need to use Whisperflow or fastflow here
         console.log('Voice input:', isListening ? 'stopped' : 'started');
     };
 
@@ -34,7 +36,7 @@ function WhisperFlowChat() {
         <div id="whisper-flow-chat">
             <h2>Whisper Flow Chat</h2>
             <div id="chat-container">
-                {/* Chat messages will display here */}
+                {/* Chat messages will display here as they are sent by user */}
             </div>
 
             <div id="input-container">
@@ -45,7 +47,9 @@ function WhisperFlowChat() {
                     placeholder="Type your command here..."
                     rows="1"
                 />
+
                 <button onClick={handleSend}>Send</button>
+                
                 <button 
                     onClick={handleVoiceInput}
                     className={isListening ? 'listening' : ''}

@@ -1,14 +1,31 @@
 #home-page {
     display: flex;
     flex-direction: row;
-    gap: 24px;
+    gap: 20px;
     padding: 24px;
     height: 100vh;
     box-sizing: border-box;
+    background-color: #0d1117; /* Matches the dark theme in the team's images */
+    overflow: hidden;
 }
 
-/* Make child components fill available space */
+/* This makes sure all 4 columns stay equal and don't shrink too much */
 #home-page > * {
     flex: 1;
-    min-height: 0;  /* Important for flex children with overflow */
+    min-width: 250px; 
+    height: 100%;
+    min-height: 0;
+}
+
+/* Styling for your specific voice wrapper to match their cards */
+.voice-control-wrapper {
+    background: #1f2937;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
 }

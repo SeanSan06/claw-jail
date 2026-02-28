@@ -17,11 +17,11 @@ import './styles/specific-components/security-mode-selected.css';
 // based on the current path
 function App() {
     return (
-    <div>
-        <Routes>
-            <Route path="/" element={<HomePage />} />
-        </Routes>
-    </div>
+        <div>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+            </Routes>
+        </div>
     )
 }
 

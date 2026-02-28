@@ -1,4 +1,7 @@
 import WhisperFlow from '../components/WhisperFlow';
+import LiveActivityLog from '../components/LiveActivityLog';
+import WhisperFlowChat from '../components/WhisperFlowChat';
+import SecurityModeSelected from '../components/SecurityModeSelected';
 
 function HomePage() {
     return (
@@ -8,11 +11,18 @@ function HomePage() {
                 <p className="dashboard-subtitle">AI Security Protocol Manager</p>
             </div>
 
-            <div className="dashboard-grid">
+            <div id="home-page">
+                {/* The Team's new components */}
+                <LiveActivityLog />
+                
+                {/* Your Voice Control */}
                 <div className="dashboard-card main-voice">
                     <h2>Voice Control</h2>
                     <WhisperFlow />
                 </div>
+
+                <WhisperFlowChat />
+                <SecurityModeSelected />
             </div>
         </div>
     );

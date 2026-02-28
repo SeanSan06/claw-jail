@@ -1,0 +1,14 @@
+#home-page {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    padding: 24px;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+/* Make child components fill available space */
+#home-page > * {
+    flex: 1;
+    min-height: 0;  /* Important for flex children with overflow */
+}

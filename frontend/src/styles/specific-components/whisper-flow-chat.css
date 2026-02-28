@@ -27,15 +27,15 @@
     min-height: 0;
 }
 
-/* Input box area */
+/* Input box area - stacked layout */
 #input-container {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    align-items: flex-end;
 }
 
 #input-container textarea {
-    flex: 1;
+    width: 100%;
     padding: 10px 12px;
     border: 1px solid #374151;
     border-radius: 6px;
@@ -44,20 +44,27 @@
     font-family: 'Courier New', monospace;
     font-size: 14px;
     resize: none;
-    max-height: 120px;
+    max-height: 72px;
     overflow-y: auto;
     outline: none;
     transition: border-color 0.2s;
-    min-width: 0;
+    box-sizing: border-box;
 }
 
-    #input-container textarea:focus {
-        border-color: #3b82f6;
-    }
+#input-container textarea:focus {
+    border-color: #3b82f6;
+}
 
-    #input-container textarea::placeholder {
-        color: #6b7280;
-    }
+#input-container textarea::placeholder {
+    color: #6b7280;
+}
+
+/* Button row - left and right alignment */
+#button-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
 
 /* Buttons for sending message and toggling voice input */
 #input-container button {
@@ -74,24 +81,24 @@
     flex-shrink: 0;
 }
 
-    #input-container button:hover {
-        background: #2563eb;
-    }
+#input-container button:hover {
+    background: #2563eb;
+}
 
-    #input-container button:active {
-        background: #1d4ed8;
-    }
+#input-container button:active {
+    background: #1d4ed8;
+}
 
-    #input-container button.listening {
-        background: #ef4444;
-        animation: pulse 1s infinite;
-    }
+#input-container button.listening {
+    background: #ef4444;
+    animation: pulse 1s infinite;
+}
 
-    #input-container button.listening:hover {
-        background: #dc2626;
-    }
+#input-container button.listening:hover {
+    background: #dc2626;
+}
 
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}

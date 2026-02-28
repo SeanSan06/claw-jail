@@ -1,14 +1,28 @@
 #home-page {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 24px;
     padding: 24px;
     height: 100vh;
     box-sizing: border-box;
 }
 
-/* Make child components fill available space equally */
-#home-page > * {
+/* NavBar stays at the top */
+#home-page > nav {
+    flex-shrink: 0;
+}
+
+/* Container for the 3 columns below */
+#content-columns {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Make the 3 column components fill available space equally */
+#content-columns > * {
     flex: 1;
     min-height: 0;  /* Important for flex children with overflow */
 }

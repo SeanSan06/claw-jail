@@ -1,7 +1,9 @@
+import LiveActivityLog from '../components/LiveActivityLog';
+
 function HomePage() {
     return  (
         <div>
-            <h1 className="home-page-title">Welcome to Claw Jail!</h1>
+            <LiveActivityLog />
         </div>
     );
 }

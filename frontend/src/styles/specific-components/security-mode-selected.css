@@ -1,0 +1,81 @@
+/* Securit modes selected area */
+#security-modes-selected-area {
+    background: #1f2937;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+#security-modes-selected-area h2 {
+    margin: 0 0 8px 0;
+    color: #f3f4f6;
+    font-size: 18px;
+}
+
+/* Individual mode cards indication */
+#security-modes-selected-area > div[id^="security-mode-"] {
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    padding: 12px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+    #security-modes-selected-area > div[id^="security-mode-"].active {
+        border-color: #10b981;
+        background: #0d3d2e;
+    }
+
+    #security-modes-selected-area > div[id^="security-mode-"].inactive {
+        opacity: 0.7;
+        background: #1f2937;
+    }
+
+/* Mode header with title and label */
+.mode-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mode-header h3 {
+    margin: 0;
+    color: #f3f4f6;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Active/Inactive labels */
+.active-label {
+    background: #10b981;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.inactive-label {
+    background: #6b7280;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* Mode description */
+#security-modes-selected-area > div[id^="security-mode-"] p {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 14px;
+    line-height: 1.5;
+}

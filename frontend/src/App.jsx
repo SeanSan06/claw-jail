@@ -6,7 +6,10 @@ import { Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage';
 
 import './styles/styles.css'
-import './styles/home-page.css'
+import './styles/home-page.css';
+import './styles/specific-components/live-activity-log.css';
+import './styles/specific-components/whisper-flow-chat.css';
+import './styles/specific-components/security-mode-selected.css';
 
 
 // Defines what Page Component appears for each of the webpages 

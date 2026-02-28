@@ -4,3 +4,5 @@ pydantic==2.5.1
 python-dotenv==1.0.0
 faster-whisper
 python-multipart
+uuid
+pydantic-settings

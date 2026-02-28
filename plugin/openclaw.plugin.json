@@ -1,0 +1,29 @@
+{
+  "id": "tool-call-logger",
+  "name": "Tool Call Logger",
+  "description": "Intercepts all agent tool calls and prints them to the console",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "logResults": {
+        "type": "boolean",
+        "description": "Also log tool results after execution (default: true)"
+      },
+      "verbose": {
+        "type": "boolean",
+        "description": "Include full tool parameters and results in output (default: false)"
+      }
+    }
+  },
+  "uiHints": {
+    "logResults": {
+      "label": "Log Results",
+      "help": "Log tool results after execution completes"
+    },
+    "verbose": {
+      "label": "Verbose Output",
+      "help": "Include full tool parameters and results in console output"
+    }
+  }
+}

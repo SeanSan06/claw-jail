@@ -10,7 +10,7 @@ function WhisperFlowChat() {
         
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
         }
     };
 
@@ -48,14 +48,16 @@ function WhisperFlowChat() {
                     rows="1"
                 />
 
-                <button onClick={handleSend}>Send</button>
+                <div id="button-row">
+                    <button 
+                        onClick={handleVoiceInput}
+                        className={isListening ? 'listening' : ''}
+                    >
+                        {isListening ? '🎙️ Listening...' : '🎙️ Voice Input'}
+                    </button>
 
-                <button 
-                    onClick={handleVoiceInput}
-                    className={isListening ? 'listening' : ''}
-                >
-                    {isListening ? '🎙️ Listening...' : '🎙️ Voice Input'}
-                </button>
+                    <button onClick={handleSend}>Send</button>
+                </div>
             </div>
         </div>
     );

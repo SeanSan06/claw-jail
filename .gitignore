@@ -1,0 +1,29 @@
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python virtual environments
+fastapi-env/
+venv/
+.venv/
+backend/venv/
+
+# Python cache / build
+**/__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node dependencies / build
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+
+# Env files
+.env
+.env.*

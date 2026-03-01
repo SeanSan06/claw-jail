@@ -23,15 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 
-# Python envs
+# Python virtualenvs
 fastapi-env/
-backend/venv/
-.venv/
 venv/
+.venv/
+backend/venv/
 
 # Python cache
 **/__pycache__/
-*.pyc
+*.py[cod]
 
 # Node deps
 frontend/node_modules/

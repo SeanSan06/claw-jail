@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 
+const BACKEND_URL = 'http://localhost:8000';
+
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([]);
     const [isListening, setIsListening] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false); 
-    const [statusMsg, setStatusMsg] = useState(''); 
-    
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [statusMsg, setStatusMsg] = useState('');
+
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const messagesEndRef = useRef(null);
@@ -16,13 +18,22 @@ function WhisperFlowChat() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    const addMessage = (text, sender) => {
+        setMessages(prev => [...prev, {
+            id: Date.now() + Math.random(),
+            text,
+            sender,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }]);
+    };
+
     const handleInputChange = (e) => {
         setInput(e.target.value);
-        setStatusMsg(''); // Clear any errors when user starts typing
+        setStatusMsg('');
     };
 
     const startRecording = async () => {
-        setStatusMsg(''); // Clear previous messages
+        setStatusMsg('');
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorderRef.current = new MediaRecorder(stream);
@@ -33,7 +44,6 @@ function WhisperFlowChat() {
             };
 
             mediaRecorderRef.current.onstop = async () => {
-                // Add the type: 'audio/webm' so ffmpeg knows exactly what file this is
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 await sendAudioToBackend(audioBlob);
             };
@@ -66,10 +76,10 @@ function WhisperFlowChat() {
     const sendAudioToBackend = async (blob) => {
         setIsProcessing(true);
         const formData = new FormData();
-        formData.append('file', blob, 'command.webm'); 
+        formData.append('file', blob, 'command.webm');
 
         try {
-            const response = await fetch('http://localhost:8000/api/voice-command', {
+            const response = await fetch(`${BACKEND_URL}/policy/voice`, {
                 method: 'POST',
                 body: formData,
             });
@@ -79,18 +89,18 @@ function WhisperFlowChat() {
             }
 
             const data = await response.json();
-            console.log("Backend Result:", data); 
-            
+            console.log("Voice result:", data);
+
             if (data.transcript) {
-                setInput(data.transcript); 
-                setStatusMsg(''); // Success, no error message needed
-            } else if (data.status === "empty") {
-                setStatusMsg("Could not hear you. Please try again.");
+                addMessage(`🎙️ "${data.transcript}"`, 'user');
+                addMessage(`Policy updated. Blacklisted words: ${data.policy.word_blacklist.join(', ') || 'none'}. Blacklisted tools: ${data.policy.tool_blacklist.join(', ') || 'none'}. Threshold: ${data.policy.risk_threshold}.`, 'bot');
+            } else {
+                addMessage('🎙️ (no speech detected)', 'user');
+                addMessage("Could not hear you. Please try again.", 'bot');
             }
-            
         } catch (error) {
-            console.error("Upload failed. Is the Python backend running?", error);
-            setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
+            console.error("Upload failed:", error);
+            setStatusMsg("Error: Could not connect to backend.");
         } finally {
             setIsProcessing(false);
         }
@@ -98,14 +108,9 @@ function WhisperFlowChat() {
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
-            if (e.ctrlKey || e.metaKey) {
-                // Ctrl/Cmd + Enter: allow newline (default behavior)
-                return;
-            } else if (e.shiftKey) {
-                // Shift + Enter: allow newline (default behavior)
+            if (e.ctrlKey || e.metaKey || e.shiftKey) {
                 return;
             } else {
-                // Just Enter: send message
                 e.preventDefault();
                 handleSend();
             }
@@ -115,21 +120,18 @@ function WhisperFlowChat() {
     const handleSend = async () => {
         if (input.trim()) {
             const userText = input.trim();
-            console.log("User submitted text:", userText);
-            
-            // Clear input and status right away for a snappy UI
+
             setInput('');
             setStatusMsg('');
             setIsProcessing(true);
 
+            addMessage(userText, 'user');
+
             try {
-                // Send the text payload to our new endpoint
-                const response = await fetch('http://localhost:8000/api/text-command', {
+                const response = await fetch(`${BACKEND_URL}/policy`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ text: userText }),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userText }),
                 });
 
                 if (!response.ok) {
@@ -137,19 +139,15 @@ function WhisperFlowChat() {
                 }
 
                 const data = await response.json();
-                console.log("Backend Text Result:", data);
-                
-                if (data.status === 'success') {
-                    // Hey teammates! Pass data.command to the bot agent here!
-                    console.log("🔥 Fuzzy matched command:", data.command);
-                    setStatusMsg(`Command recognized: ${data.command} (Confidence: ${data.confidence}%)`);
-                } else {
-                    setStatusMsg(`Unrecognized command: "${data.original_text}". Try again.`);
-                }
-                
+                console.log("Policy update result:", data);
+
+                addMessage(
+                    `Policy updated. Blacklisted words: ${data.policy.word_blacklist.join(', ') || 'none'}. Blacklisted tools: ${data.policy.tool_blacklist.join(', ') || 'none'}. Threshold: ${data.policy.risk_threshold}.`,
+                    'bot'
+                );
             } catch (error) {
                 console.error("Failed to send text to backend:", error);
-                setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
+                addMessage("Error: Could not connect to backend.", 'bot');
             } finally {
                 setIsProcessing(false);
             }
@@ -163,12 +161,12 @@ function WhisperFlowChat() {
     return (
         <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
-            
+
             {/* Chat display area */}
             <div id="chat-messages-container">
                 {messages.length === 0 ? (
                     <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>
-                        Start a conversation...
+                        Type or speak to update security policy…
                     </div>
                 ) : (
                     messages.map((msg) => (
@@ -180,16 +178,16 @@ function WhisperFlowChat() {
                 )}
                 <div ref={messagesEndRef} />
             </div>
-            
+
             <div id="input-container">
                 <textarea
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your command here..."
+                    placeholder="Type policy update (e.g. 'block rm-tool sudo')..."
                     rows="1"
                 />
-                
+
                 {statusMsg && (
                     <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
                         {statusMsg}
@@ -197,7 +195,7 @@ function WhisperFlowChat() {
                 )}
 
                 <div id="button-row" style={{ marginTop: '8px' }}>
-                    <button 
+                    <button
                         onClick={handleVoiceInput}
                         className={isListening ? 'listening' : ''}
                         disabled={isProcessing}

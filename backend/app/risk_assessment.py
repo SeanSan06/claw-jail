@@ -46,6 +46,10 @@ class PolicyStore:
     def policy(self) -> SecurityPolicy:
         return self._policy
 
+    def set_policy(self, policy: SecurityPolicy) -> None:
+        """Replace the entire policy."""
+        self._policy = policy
+
     def set_threshold(self, value: int) -> None:
         self._policy.risk_threshold = max(1, min(100, value))
 

@@ -1,179 +1,196 @@
 import { useState, useEffect, useRef } from 'react';
 import '../styles/specific-components/live-activity-log.css';
 
+const BACKEND_URL = 'http://localhost:8000';
+const WS_URL = 'ws://localhost:8000/commands';
+
 function LiveActivityLog() {
     const [logs, setLogs] = useState([]);
     const [autoScroll, setAutoScroll] = useState(true);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [isPaused, setIsPaused] = useState(false);
-    const [pendingHighRiskId, setPendingHighRiskId] = useState(null);
+    const [connected, setConnected] = useState(false);
     const logContainerRef = useRef(null);
-    const intervalRef = useRef(null);
+    const wsRef = useRef(null);
+    const reconnectTimer = useRef(null);
 
-    // Fetch initial logs from backend API
+    // Connect to the backend WebSocket for real-time tool call events
     useEffect(() => {
-        const fetchLogs = async () => {
-            try {
-                const response = await fetch('http://localhost:8000/api/logs');
-                const data = await response.json();
-                setLogs(data.logs);
-                setLoading(false);
-            } catch (err) {
-                console.error('Failed to fetch logs:', err);
-                setError('Failed to load logs');
-                setLoading(false);
-            }
-        };
+        function connect() {
+            const ws = new WebSocket(WS_URL);
+            wsRef.current = ws;
 
-        fetchLogs();
-    }, []);
-
-    // Start interval for new logs (only when not paused)
-    useEffect(() => {
-        if (isPaused) {
-            // Clear interval if paused
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            return;
-        }
-
-        const actions = [
-            'Network connection established',
-            'File access: /etc/config',
-            'Process spawned: systemd',
-            'Memory allocation: 256MB',
-            'DNS query: google.com',
-            'SSH login attempt',
-            'Database query executed',
-            'Cache cleared',
-            'Firewall rule updated',
-            'Backup initiated'
-        ];
-
-        intervalRef.current = setInterval(() => {
-            const risks = ['low', 'medium', 'high'];
-            const randomAction = actions[Math.floor(Math.random() * actions.length)];
-            const randomRisk = risks[Math.floor(Math.random() * risks.length)];
-
-            const newLog = {
-                id: Date.now(),
-                timestamp: new Date().toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit' 
-                }),
-                action: randomAction,
-                risk: randomRisk,
-                status: 'pending' // pending, approved, rejected
+            ws.onopen = () => {
+                console.log('[LiveActivityLog] WebSocket connected');
+                setConnected(true);
             };
 
-            setLogs(prev => [newLog, ...prev.slice(0, 49)]);
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
 
-            // If high risk, pause and wait for user decision
-            if (randomRisk === 'high') {
-                setIsPaused(true);
-                setPendingHighRiskId(newLog.id);
-            }
-        }, 3000);
+                    // Decision updates (approve/reject/timeout) for existing entries
+                    if (data.type === 'decision') {
+                        setLogs(prev => prev.map(log =>
+                            log.request_id === data.request_id
+                                ? { ...log, status: data.status, needs_approval: false }
+                                : log
+                        ));
+                        return;
+                    }
 
-        return () => clearInterval(intervalRef.current);
-    }, [isPaused]);
+                    // New tool call event
+                    const entry = {
+                        request_id: data.request_id,
+                        timestamp: new Date().toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                        }),
+                        tool_name: data.tool_name,
+                        input: data.input,
+                        risk_score: data.risk_score,
+                        flagged: data.flagged,
+                        needs_approval: data.needs_approval,
+                        status: data.status, // "approved", "blocked", or "pending"
+                        matched_patterns: data.matched_patterns || [],
+                        blacklist_hit: data.blacklist_hit,
+                    };
 
-    // Auto-scroll to bottom when new logs are added
+                    setLogs(prev => [entry, ...prev.slice(0, 99)]);
+                } catch (err) {
+                    console.error('[LiveActivityLog] Failed to parse WS message:', err);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('[LiveActivityLog] WebSocket disconnected, reconnecting in 3s…');
+                setConnected(false);
+                reconnectTimer.current = setTimeout(connect, 3000);
+            };
+
+            ws.onerror = (err) => {
+                console.error('[LiveActivityLog] WebSocket error:', err);
+                ws.close();
+            };
+        }
+
+        connect();
+
+        return () => {
+            clearTimeout(reconnectTimer.current);
+            if (wsRef.current) wsRef.current.close();
+        };
+    }, []);
+
+    // Auto-scroll when new logs arrive
     useEffect(() => {
         if (autoScroll && logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
     }, [logs, autoScroll]);
 
-    // Handle approve action
-    const handleApprove = async (logId) => {
+    // Approve a flagged tool call
+    const handleApprove = async (requestId) => {
         try {
-            // Send approval to backend
-            await fetch(`http://localhost:8000/api/logs/${logId}/approve`, {
-                method: 'POST'
-            });
-
-            // Update log status in UI
-            setLogs(prev => prev.map(log => 
-                log.id === logId ? { ...log, status: 'approved' } : log
+            const res = await fetch(`${BACKEND_URL}/commands/${requestId}/approve`, { method: 'POST' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            // Optimistic UI update
+            setLogs(prev => prev.map(log =>
+                log.request_id === requestId
+                    ? { ...log, status: 'approved', needs_approval: false }
+                    : log
             ));
-
-            // Resume log stream
-            setPendingHighRiskId(null);
-            setIsPaused(false);
         } catch (err) {
-            console.error('Failed to approve log:', err);
+            console.error('Failed to approve:', err);
         }
     };
 
-    // Handle reject action
-    const handleReject = async (logId) => {
+    // Reject a flagged tool call
+    const handleReject = async (requestId) => {
         try {
-            // Send rejection to backend
-            await fetch(`http://localhost:8000/api/logs/${logId}/reject`, {
-                method: 'POST'
-            });
-
-            // Update log status in UI
-            setLogs(prev => prev.map(log => 
-                log.id === logId ? { ...log, status: 'rejected' } : log
+            const res = await fetch(`${BACKEND_URL}/commands/${requestId}/reject`, { method: 'POST' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            setLogs(prev => prev.map(log =>
+                log.request_id === requestId
+                    ? { ...log, status: 'rejected', needs_approval: false }
+                    : log
             ));
-
-            // Resume log stream
-            setPendingHighRiskId(null);
-            setIsPaused(false);
         } catch (err) {
-            console.error('Failed to reject log:', err);
+            console.error('Failed to reject:', err);
         }
     };
 
-    const getLogStatusClass = (status, risk) => {
-        if (status === 'approved') return 'log-entry approved';
-        if (status === 'rejected') return 'log-entry rejected';
-        if (risk === 'high') return 'log-entry high-risk';
-        return 'log-entry';
+    const getRiskClass = (score) => {
+        if (score >= 70) return 'high';
+        if (score >= 40) return 'medium';
+        return 'low';
     };
 
-    if (loading) return <div id="live-activity-log"><p>Loading logs...</p></div>;
-    if (error) return <div id="live-activity-log"><p>{error}</p></div>;
+    const getEntryClass = (log) => {
+        const classes = ['log-entry'];
+        if (log.status === 'approved') classes.push('approved');
+        if (log.status === 'rejected' || log.status === 'blocked') classes.push('rejected');
+        if (log.needs_approval) classes.push('high-risk');
+        return classes.join(' ');
+    };
+
+    const formatInput = (input) => {
+        if (!input) return '';
+        return Object.entries(input).map(([k, v]) => `${k}: ${v}`).join(', ');
+    };
 
     return (
         <div id="live-activity-log">
-            <h2>Live Activity Log</h2>
+            <h2>
+                Live Activity Log
+                <span className={`ws-indicator ${connected ? 'connected' : 'disconnected'}`}
+                      title={connected ? 'Connected' : 'Disconnected'}>
+                    {connected ? '●' : '○'}
+                </span>
+            </h2>
             <div id="log-entries" ref={logContainerRef}>
+                {logs.length === 0 && (
+                    <div className="log-empty">Waiting for tool calls…</div>
+                )}
                 {logs.map(log => (
-                    <div key={log.id} className={getLogStatusClass(log.status, log.risk)}>
+                    <div key={log.request_id} className={getEntryClass(log)}>
                         <span className="log-time">{log.timestamp}</span>
-                        <span className="log-action">{log.action}</span>
-                        
+                        <span className="log-action">
+                            <strong>{log.tool_name}</strong>
+                            {log.input && <span className="log-input"> — {formatInput(log.input)}</span>}
+                        </span>
+
                         <div className="log-controls">
-                            {log.risk === 'high' && log.status === 'pending' && (
+                            {log.needs_approval && log.status === 'pending' && (
                                 <div className="log-actions">
-                                    <button 
-                                        className="btn-approve" 
-                                        onClick={() => handleApprove(log.id)}
+                                    <button
+                                        className="btn-approve"
+                                        onClick={() => handleApprove(log.request_id)}
                                     >
                                         ✓ Approve
                                     </button>
-                                    <button 
-                                        className="btn-reject" 
-                                        onClick={() => handleReject(log.id)}
+                                    <button
+                                        className="btn-reject"
+                                        onClick={() => handleReject(log.request_id)}
                                     >
                                         ✕ Reject
                                     </button>
                                 </div>
                             )}
-                            
+
                             {log.status === 'approved' && (
                                 <span className="status-badge status-approved">APPROVED</span>
                             )}
-                            {log.status === 'rejected' && (
-                                <span className="status-badge status-rejected">REJECTED</span>
+                            {(log.status === 'rejected' || log.status === 'timeout') && (
+                                <span className="status-badge status-rejected">
+                                    {log.status === 'timeout' ? 'TIMED OUT' : 'REJECTED'}
+                                </span>
                             )}
-                            
-                            <span className={`risk-badge risk-${log.risk}`}>
-                                {log.risk.toUpperCase()}
+                            {log.status === 'blocked' && (
+                                <span className="status-badge status-rejected">BLOCKED</span>
+                            )}
+
+                            <span className={`risk-badge risk-${getRiskClass(log.risk_score)}`}>
+                                {log.risk_score}
                             </span>
                         </div>
                     </div>

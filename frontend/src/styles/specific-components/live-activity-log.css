@@ -16,6 +16,33 @@
     font-weight: 600;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ws-indicator {
+    font-size: 12px;
+}
+
+.ws-indicator.connected {
+    color: #10b981;
+}
+
+.ws-indicator.disconnected {
+    color: #ef4444;
+}
+
+.log-empty {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 14px;
+}
+
+.log-input {
+    color: var(--text-secondary);
+    font-size: 12px;
 }
 
 #log-entries {

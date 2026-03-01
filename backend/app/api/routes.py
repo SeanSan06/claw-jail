@@ -1,259 +1,107 @@
+"""All API routes.
+
+Endpoints:
+  GET  /              — healthcheck
+  POST /commands      — bot command risk assessment
+  GET  /policy        — current security policy
+  POST /policy        — update policy from chat log
+  POST /policy/voice  — update policy from audio
+"""
+
 import os
-import uuid
-from datetime import datetime
+import tempfile
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
-from thefuzz import process, fuzz
-from app.schemas.security import LogEntry, LogResponse
-from pydantic import BaseModel
 
-class TextInput(BaseModel):
-    text: str
+from app.models import ChatLogMessage, SecurityPolicy, WebhookEnvelope, ApprovalResponse
+from app.risk_assessment import compute_risk, policy_store
+from app.api.websocket import command_queue
 
 router = APIRouter()
 
-# LOAD THE MODEL GLOBALLY
-# 'tiny' is used because it's the fastest for CPU-only hackathon environments.
 model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
 
-COMMAND_MAP = {
-    "safe": "MODE_SAFE",
-    "saf": "MODE_SAFE",             # Catches the exact typo you tried!
-    "flexible": "MODE_FLEXIBLE",
-    "flex": "MODE_FLEXIBLE",        # Catches "turn on flex"
-    "aggressive": "MODE_AGGRESSIVE",
-    "custom": "MODE_CUSTOM",
-    "clear": "ACTION_CLEAR",
-    "log": "ACTION_LOGS",
-    "logs": "ACTION_LOGS",
-    "stop": "SYSTEM_HALT"
-}
-
-# 3. MOCK ACTIVITY LOGS
-# These will eventually come from the rules_engine.py and shim.py
-# For now, this is just test data to populate the frontend
-ACTIVITY_LOGS = [
-    LogEntry(id=1, timestamp="14:32:05", action="Read file: config.json", risk="low"),
-    LogEntry(id=2, timestamp="14:32:08", action="Execute: npm install", risk="medium"),
-    LogEntry(id=3, timestamp="14:32:12", action="Delete directory: /tmp/cache", risk="high"),
-    LogEntry(id=4, timestamp="14:32:15", action="Read environment variables", risk="medium"),
-    LogEntry(id=5, timestamp="14:32:18", action="Access /etc/passwd", risk="high"),
-]
-
-@router.get("/health")
-async def health():
-    """Check if the backend and Whisper model are ready."""
-    return {"status": "online", "model": "tiny"}
+@router.get("/")
+async def healthcheck():
+    return {"status": "online"}
 
 
-@router.get("/logs", response_model=LogResponse)
-async def get_logs():
-    """
-    Fetch all activity logs.
-    
-    This endpoint returns a list of security-related activities logged by the system.
-    Each log entry contains:
-    - id: Unique identifier
-    - timestamp: When the action occurred (HH:MM:SS format)
-    - action: Description of what happened
-    - risk: Risk level (low, medium, high)
-    
-    TODO: Replace ACTIVITY_LOGS with real data from rules_engine.py
-    """
-    return LogResponse(logs=ACTIVITY_LOGS, total=len(ACTIVITY_LOGS))
+@router.post("/commands", response_model=ApprovalResponse)
+async def receive_command(envelope: WebhookEnvelope):
+    event = envelope.event
 
+    # Build a representative command string for risk scoring.
+    # If the event carries an 'input' dict (tool arguments), serialise it;
+    # otherwise fall back to the tool name alone.
+    if event.input:
+        command_str = f"{event.toolName} {' '.join(str(v) for v in event.input.values())}"
+    else:
+        command_str = event.toolName
 
-@router.post("/logs/send")
-async def send_command(payload: dict):
-    """
-    Send a command to be processed and logged.
-    
-    Parameters:
-    - command: The command text from the user
-    
-    This endpoint receives user input, logs it, and returns a response.
-    """
-    command = payload.get("command", "")
-    if not command:
-        raise HTTPException(status_code=400, detail="No command provided")
-    
-    # Add the command as a log entry
-    new_log = LogEntry(
-        id=len(ACTIVITY_LOGS) + 1,
-        timestamp=datetime.now().strftime("%H:%M:%S"),
-        action=f"User command: {command}",
-        risk="medium"  # Default to medium, can be adjusted based on analysis
-    )
-    ACTIVITY_LOGS.append(new_log)
-    
-    # TODO: Send to agent for processing
-    # For now, just echo back the command
-    response_text = f"Command received: {command}"
-    
-    return {"response": response_text, "command": command, "log_id": new_log.id}
-
-
-@router.post("/logs/add")
-async def add_log(action: str, risk: str):
-    """
-    Add a new log entry.
-    
-    Parameters:
-    - action: Description of the command/action
-    - risk: Risk level (must be 'low', 'medium', or 'high')
-    
-    This endpoint is called when a new command is executed and needs to be logged.
-    The timestamp is generated automatically.
-    """
-    if risk not in ["low", "medium", "high"]:
-        raise HTTPException(status_code=400, detail="Risk must be 'low', 'medium', or 'high'")
-    
-    # Generate new log entry
-    new_log = LogEntry(
-        id=len(ACTIVITY_LOGS) + 1,
-        timestamp=datetime.now().strftime("%H:%M:%S"),
-        action=action,
-        risk=risk
-    )
-    ACTIVITY_LOGS.append(new_log)
-    
-    return new_log
-
-
-@router.delete("/logs/clear")
-async def clear_logs():
-    """
-    Clear all activity logs.
-    Useful for testing or resetting the system state.
-    """
-    global ACTIVITY_LOGS
-    ACTIVITY_LOGS = []
-    return {"message": "All logs cleared", "total": 0}
-
-
-@router.post("/logs/{log_id}/approve")
-async def approve_log(log_id: int):
-    """
-    Approve a log entry (typically used for high-risk actions).
-    
-    When a user approves a high-risk action:
-    - The system logs the user's approval
-    - The action is allowed to proceed
-    - Returns confirmation to frontend
-    
-    TODO: Integrate with rules_engine to allow the action
-    """
-    return {
-        "status": "approved",
-        "log_id": log_id,
-        "message": f"Log {log_id} approved by user. Action will proceed."
-    }
-
-
-@router.post("/logs/{log_id}/reject")
-async def reject_log(log_id: int):
-    """
-    Reject a log entry (typically used for high-risk actions).
-    
-    When a user rejects a high-risk action:
-    - The system blocks the action
-    - The rejection is logged
-    - Returns confirmation to frontend
-    
-    TODO: Integrate with rules_engine to block the action
-    """
-    return {
-        "status": "rejected",
-        "log_id": log_id,
-        "message": f"Log {log_id} rejected by user. Action has been blocked."
-    }
-
-@router.post("/voice-command")
-async def handle_voice_command(file: UploadFile = File(...)):
-    """
-    Receives audio from the React frontend, transcribes it, 
-    and uses Fuzzy Logic to find the best matching command.
-    """
-    # FIXED: Save as .webm because that is what the React browser sends!
-    temp_filename = f"audio_{uuid.uuid4()}.webm"
-    
-    try:
-        # Save the incoming audio blob to a temporary file
-        with open(temp_filename, "wb") as f:
-            f.write(await file.read())
-
-        # TRANSCRIBE
-        segments, _ = model.transcribe(temp_filename, beam_size=5, vad_filter=False)
-        spoken_text = " ".join([s.text for s in segments]).lower().strip()
-        
-        # Print to your backend terminal so you can see exactly what the AI heard
-        print(f"--- WHISPER HEARD: '{spoken_text}' ---")
-        
-        if not spoken_text:
-            return {"status": "empty", "message": "No speech detected."}
-
-        # FUZZY INTERPRETATION
-        choices = list(COMMAND_MAP.keys())
-        result = process.extractOne(spoken_text, choices, scorer=fuzz.WRatio)
-        
-        if result:
-            best_match, score = result
-            if score >= 60:
-                found_command = COMMAND_MAP[best_match]
-                return {
-                    "status": "success",
-                    "command": found_command,
-                    "transcript": spoken_text,
-                    "confidence": score,
-                    "message": f"Command '{best_match}' recognized."
-                }
-
-        # UNCERTAIN FALLBACK
-        return {
-            "status": "uncertain",
-            "transcript": spoken_text,
-            "message": f"I heard '{spoken_text}', but that isn't a recognized command."
+    # Check tool blacklist first
+    if event.toolName in policy_store.policy.tool_blacklist:
+        ws_payload = {
+            "hook": envelope.hook,
+            "tool_name": event.toolName,
+            "input": event.input,
+            "risk_score": 100,
+            "flagged": True,
+            "matched_patterns": ["tool_blacklisted"],
+            "blacklist_hit": True,
         }
+        await command_queue.put(ws_payload)
+        return ApprovalResponse(approve=False, reason=f"Tool '{event.toolName}' is blacklisted")
 
+    risk = compute_risk(command_str)
+
+    ws_payload = {
+        "hook": envelope.hook,
+        "tool_name": event.toolName,
+        "input": event.input,
+        "risk_score": risk.score,
+        "flagged": risk.flagged,
+        "matched_patterns": risk.matched_patterns,
+        "blacklist_hit": risk.blacklist_hit,
+        "llm_consulted": risk.llm_consulted,
+        "llm_score": risk.llm_score,
+    }
+    await command_queue.put(ws_payload)
+
+    if risk.flagged:
+        return ApprovalResponse(
+            approve=False,
+            reason=f"Risk score {risk.score} exceeds threshold ({policy_store.policy.risk_threshold})",
+        )
+
+    return ApprovalResponse(approve=True)
+
+
+@router.get("/policy", response_model=SecurityPolicy)
+async def get_policy():
+    return policy_store.policy
+
+
+@router.post("/policy", status_code=204)
+async def update_policy(body: ChatLogMessage):
+    policy_store.ingest_chat_log(body.message)
+
+
+@router.post("/policy/voice", status_code=204)
+async def update_policy_voice(file: UploadFile = File(...)):
+    fd, temp_path = tempfile.mkstemp(suffix=".webm")
+    try:
+        os.write(fd, await file.read())
+        os.close(fd)
+
+        segments, _ = model.transcribe(temp_path, beam_size=5, vad_filter=False)
+        spoken_text = " ".join(s.text for s in segments).strip()
+
+        if spoken_text:
+            policy_store.ingest_chat_log(spoken_text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
     finally:
-        # Cleanup
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-
-@router.post("/text-command")
-async def handle_text_command(payload: TextInput):
-    """
-    Receives raw text from the React frontend
-    and uses Fuzzy Logic to find the best matching command.
-    """
-    input_text = payload.text.lower().strip()
-    
-    if not input_text:
-        return {"status": "empty", "message": "No text provided."}
-
-    # FUZZY INTERPRETATION (Reusing your existing logic)
-    choices = list(COMMAND_MAP.keys())
-    result = process.extractOne(input_text, choices, scorer=fuzz.WRatio)
-    
-    if result:
-        best_match, score = result
-        if score >= 60:
-            found_command = COMMAND_MAP[best_match]
-            return {
-                "status": "success",
-                "command": found_command,
-                "original_text": input_text,
-                "confidence": score,
-                "message": f"Command '{best_match}' recognized."
-            }
-
-    # UNCERTAIN FALLBACK
-    return {
-        "status": "uncertain",
-        "original_text": input_text,
-        "message": f"'{input_text}' isn't a recognized command."
-    }
+        if os.path.exists(temp_path):
+            os.remove(temp_path)

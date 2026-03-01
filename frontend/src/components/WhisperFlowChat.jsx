@@ -2,16 +2,90 @@ import { useState, useRef } from 'react';
 
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
-    const [messages, setMessages] = useState([]);
     const [isListening, setIsListening] = useState(false);
-    const textareaRef = useRef(null);
+    const [isProcessing, setIsProcessing] = useState(false); 
+    const [statusMsg, setStatusMsg] = useState(''); 
+    
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
 
     const handleInputChange = (e) => {
         setInput(e.target.value);
-        
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
+        setStatusMsg(''); // Clear any errors when user starts typing
+    };
+
+    const startRecording = async () => {
+        setStatusMsg(''); // Clear previous messages
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorderRef.current.onstop = async () => {
+                // Add the type: 'audio/webm' so ffmpeg knows exactly what file this is
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await sendAudioToBackend(audioBlob);
+            };
+
+            mediaRecorderRef.current.start();
+            setIsListening(true);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            setStatusMsg('Microphone access denied or unavailable.');
+            setIsListening(false);
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            setIsListening(false);
+        }
+    };
+
+    const handleVoiceInput = () => {
+        if (isListening) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
+
+    const sendAudioToBackend = async (blob) => {
+        setIsProcessing(true);
+        const formData = new FormData();
+        formData.append('file', blob, 'command.webm'); 
+
+        try {
+            const response = await fetch('http://localhost:8000/api/voice-command', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Backend Result:", data); 
+            
+            if (data.transcript) {
+                setInput(data.transcript); 
+                setStatusMsg(''); // Success, no error message needed
+            } else if (data.status === "empty") {
+                setStatusMsg("Could not hear you. Please try again.");
+            }
+            
+        } catch (error) {
+            console.error("Upload failed. Is the Python backend running?", error);
+            setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -33,66 +107,50 @@ function WhisperFlowChat() {
 
     const handleSend = () => {
         if (input.trim()) {
-            // Add user message
-            setMessages([...messages, { text: input, sender: 'user', timestamp: new Date() }]);
+            console.log("User clicked send! Final text:", input);
             
-            // Simulate bot response after a delay
-            // This gets the real time date using the Date object and formats it to show only hours and minutes
-            setTimeout(() => {
-                setMessages(prev => [...prev, { 
-                    text: 'Bot response will appear here', 
-                    sender: 'bot', 
-                    timestamp: new Date() 
-                }]);
-            }, 1000);
+            // ---------------------------------------------------------
+            // Hey teammates! Pass the 'input' variable to the bot agent here!
+            // ---------------------------------------------------------
             
             setInput('');
-
-            if (textareaRef.current) {
-                textareaRef.current.style.height = 'auto';
-            }
+            setStatusMsg('');
         }
     };
 
-    const handleVoiceInput = () => {
-        setIsListening(!isListening);
-        // TODO: Implement Web Speech API or call backend voice service
-        console.log('Voice input:', isListening ? 'stopped' : 'started');
-    };
+    let buttonText = '🎙️ Voice Input';
+    if (isProcessing) buttonText = '⏳ Processing...';
+    else if (isListening) buttonText = '🛑 Stop Listening';
 
     return (
         <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
-            <div id="chat-container">
-                {messages.map((msg, index) => (
-                    <div key={index} className={`message ${msg.sender}`}>
-                        <span className="message-text">{msg.text}</span>
-                        <span className="message-time">
-                            {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    </div>
-                ))}
-            </div>
-
-            <div id="input-container">
+            
+            <div id="input-container" style={{ marginTop: 'auto' }}>
                 <textarea
-                    ref={textareaRef}
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     placeholder="Type your command here..."
                     rows="1"
                 />
+                
+                {statusMsg && (
+                    <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
+                        {statusMsg}
+                    </div>
+                )}
 
-                <div id="button-row">
+                <div id="button-row" style={{ marginTop: '8px' }}>
                     <button 
                         onClick={handleVoiceInput}
                         className={isListening ? 'listening' : ''}
+                        disabled={isProcessing}
                     >
-                        {isListening ? '🎙️ Listening...' : '🎙️ Voice Input'}
+                        {buttonText}
                     </button>
 
-                    <button onClick={handleSend}>Send</button>
+                    <button onClick={handleSend} disabled={isProcessing}>Send</button>
                 </div>
             </div>
         </div>

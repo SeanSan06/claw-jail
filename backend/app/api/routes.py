@@ -3,20 +3,15 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
+from thefuzz import process, fuzz
 from app.schemas.security import LogEntry, LogResponse
 
 router = APIRouter()
 
-# 1. LOAD THE MODEL
-# We load this globally so it stays in memory (much faster).
-# 'tiny' is used because it's the fastest and uses the least RAM.
+# LOAD THE MODEL GLOBALLY
+# 'tiny' is used because it's the fastest for CPU-only hackathon environments.
 model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
-# 2. THE COMMAND DICTIONARY
-# This is where you "mess with it." 
-# Left side = what you say. Right side = the code the system understands.
-
-#If needed we can always update a command, when adding a new feature
 COMMAND_MAP = {
     "activate safe mode": "MODE_SAFE",
     "go aggressive": "MODE_AGGRESSIVE",
@@ -38,8 +33,8 @@ ACTIVITY_LOGS = [
 
 @router.get("/health")
 async def health():
-    """Check if the backend is alive."""
-    return {"status": "online", "model_loaded": "tiny"}
+    """Check if the backend and Whisper model are ready."""
+    return {"status": "online", "model": "tiny"}
 
 
 @router.get("/logs", response_model=LogResponse)
@@ -137,50 +132,54 @@ async def reject_log(log_id: int):
 @router.post("/voice-command")
 async def handle_voice_command(file: UploadFile = File(...)):
     """
-    This endpoint receives audio from React, transcribes it, 
-    and matches it to a security command.
+    Receives audio from the React frontend, transcribes it, 
+    and uses Fuzzy Logic to find the best matching command.
     """
-    # 3. SAVE AUDIO TEMPORARILY
-    # We give it a unique name so multiple teammates can test at once.
-    temp_filename = f"audio_{uuid.uuid4()}.wav"
+    # FIXED: Save as .webm because that is what the React browser sends!
+    temp_filename = f"audio_{uuid.uuid4()}.webm"
     
     try:
+        # Save the incoming audio blob to a temporary file
         with open(temp_filename, "wb") as f:
             f.write(await file.read())
 
-        # 4. TRANSCRIBE (THE "EARS")
-        # We look for the first 5 seconds of audio for speed.
-        segments, _ = model.transcribe(temp_filename, beam_size=5)
+        # TRANSCRIBE
+        segments, _ = model.transcribe(temp_filename, beam_size=5, vad_filter=False)
         spoken_text = " ".join([s.text for s in segments]).lower().strip()
         
-        # 5. INTERPRET (THE "BRAIN")
-        found_command = None
-        for phrase, command_id in COMMAND_MAP.items():
-            # This 'in' check allows for natural speech like: 
-            # "Hey bot, please activate safe mode"
-            if phrase in spoken_text:
-                found_command = command_id
-                break
+        # Print to your backend terminal so you can see exactly what the AI heard
+        print(f"--- WHISPER HEARD: '{spoken_text}' ---")
+        
+        if not spoken_text:
+            return {"status": "empty", "message": "No speech detected."}
 
-        # 6. RETURN THE RESULT
-        if found_command:
-            return {
-                "status": "success",
-                "command": found_command,
-                "transcript": spoken_text,
-                "message": f"Command '{found_command}' recognized."
-            }
-        else:
-            return {
-                "status": "invalid",
-                "transcript": spoken_text,
-                "message": f"I heard '{spoken_text}', but that command isn't in my database."
-            }
+        # FUZZY INTERPRETATION
+        choices = list(COMMAND_MAP.keys())
+        result = process.extractOne(spoken_text, choices, scorer=fuzz.token_set_ratio)
+        
+        if result:
+            best_match, score = result
+            if score >= 80:
+                found_command = COMMAND_MAP[best_match]
+                return {
+                    "status": "success",
+                    "command": found_command,
+                    "transcript": spoken_text,
+                    "confidence": score,
+                    "message": f"Command '{best_match}' recognized."
+                }
+
+        # UNCERTAIN FALLBACK
+        return {
+            "status": "uncertain",
+            "transcript": spoken_text,
+            "message": f"I heard '{spoken_text}', but that isn't a recognized command."
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
     finally:
-        # Always clean up the temporary file so we don't fill up the computer
+        # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)

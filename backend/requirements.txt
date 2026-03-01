@@ -6,3 +6,5 @@ faster-whisper
 python-multipart
 uuid
 pydantic-settings
+thefuzz
+python-Levenshtein

@@ -96,6 +96,44 @@ async def clear_logs():
     ACTIVITY_LOGS = []
     return {"message": "All logs cleared", "total": 0}
 
+
+@router.post("/logs/{log_id}/approve")
+async def approve_log(log_id: int):
+    """
+    Approve a log entry (typically used for high-risk actions).
+    
+    When a user approves a high-risk action:
+    - The system logs the user's approval
+    - The action is allowed to proceed
+    - Returns confirmation to frontend
+    
+    TODO: Integrate with rules_engine to allow the action
+    """
+    return {
+        "status": "approved",
+        "log_id": log_id,
+        "message": f"Log {log_id} approved by user. Action will proceed."
+    }
+
+
+@router.post("/logs/{log_id}/reject")
+async def reject_log(log_id: int):
+    """
+    Reject a log entry (typically used for high-risk actions).
+    
+    When a user rejects a high-risk action:
+    - The system blocks the action
+    - The rejection is logged
+    - Returns confirmation to frontend
+    
+    TODO: Integrate with rules_engine to block the action
+    """
+    return {
+        "status": "rejected",
+        "log_id": log_id,
+        "message": f"Log {log_id} rejected by user. Action has been blocked."
+    }
+
 @router.post("/voice-command")
 async def handle_voice_command(file: UploadFile = File(...)):
     """

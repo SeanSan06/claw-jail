@@ -6,7 +6,10 @@ function LiveActivityLog() {
     const [autoScroll, setAutoScroll] = useState(true);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isPaused, setIsPaused] = useState(false);
+    const [pendingHighRiskId, setPendingHighRiskId] = useState(null);
     const logContainerRef = useRef(null);
+    const intervalRef = useRef(null);
 
     // Fetch initial logs from backend API
     useEffect(() => {
@@ -26,22 +29,28 @@ function LiveActivityLog() {
         fetchLogs();
     }, []);
 
-    // Simulate new logs appearing every 3 seconds
+    // Start interval for new logs (only when not paused)
     useEffect(() => {
-        const interval = setInterval(() => {
-            const actions = [
-                'Network connection established',
-                'File access: /etc/config',
-                'Process spawned: systemd',
-                'Memory allocation: 256MB',
-                'DNS query: google.com',
-                'SSH login attempt',
-                'Database query executed',
-                'Cache cleared',
-                'Firewall rule updated',
-                'Backup initiated'
-            ];
+        if (isPaused) {
+            // Clear interval if paused
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return;
+        }
 
+        const actions = [
+            'Network connection established',
+            'File access: /etc/config',
+            'Process spawned: systemd',
+            'Memory allocation: 256MB',
+            'DNS query: google.com',
+            'SSH login attempt',
+            'Database query executed',
+            'Cache cleared',
+            'Firewall rule updated',
+            'Backup initiated'
+        ];
+
+        intervalRef.current = setInterval(() => {
             const risks = ['low', 'medium', 'high'];
             const randomAction = actions[Math.floor(Math.random() * actions.length)];
             const randomRisk = risks[Math.floor(Math.random() * risks.length)];
@@ -54,14 +63,21 @@ function LiveActivityLog() {
                     second: '2-digit' 
                 }),
                 action: randomAction,
-                risk: randomRisk
+                risk: randomRisk,
+                status: 'pending' // pending, approved, rejected
             };
 
-            setLogs(prev => [newLog, ...prev.slice(0, 49)]); // Keep last 50 logs
-        }, 3000); // Add new log every 3 seconds
+            setLogs(prev => [newLog, ...prev.slice(0, 49)]);
 
-        return () => clearInterval(interval);
-    }, []);
+            // If high risk, pause and wait for user decision
+            if (randomRisk === 'high') {
+                setIsPaused(true);
+                setPendingHighRiskId(newLog.id);
+            }
+        }, 3000);
+
+        return () => clearInterval(intervalRef.current);
+    }, [isPaused]);
 
     // Auto-scroll to bottom when new logs are added
     useEffect(() => {
@@ -70,8 +86,60 @@ function LiveActivityLog() {
         }
     }, [logs, autoScroll]);
 
-    const getRiskBadgeClass = (risk) => {
-        return `risk-badge risk-${risk}`;
+    // Handle approve action
+    const handleApprove = async (logId) => {
+        try {
+            // Send approval to backend
+            await fetch(`http://localhost:8000/api/logs/${logId}/approve`, {
+                method: 'POST'
+            });
+
+            // Update log status in UI
+            setLogs(prev => prev.map(log => 
+                log.id === logId ? { ...log, status: 'approved' } : log
+            ));
+
+            // Resume log stream
+            setPendingHighRiskId(null);
+            setIsPaused(false);
+        } catch (err) {
+            console.error('Failed to approve log:', err);
+        }
+    };
+
+    // Handle reject action
+    const handleReject = async (logId) => {
+        try {
+            // Send rejection to backend
+            await fetch(`http://localhost:8000/api/logs/${logId}/reject`, {
+                method: 'POST'
+            });
+
+            // Update log status in UI
+            setLogs(prev => prev.map(log => 
+                log.id === logId ? { ...log, status: 'rejected' } : log
+            ));
+
+            // Resume log stream
+            setPendingHighRiskId(null);
+            setIsPaused(false);
+        } catch (err) {
+            console.error('Failed to reject log:', err);
+        }
+    };
+
+    const getLogStatusClass = (status, risk) => {
+        if (status === 'approved') return 'log-entry approved';
+        if (status === 'rejected') return 'log-entry rejected';
+        if (risk === 'high') return 'log-entry high-risk';
+        return 'log-entry';
+    };
+
+    const getRiskBadgeText = (risk, status) => {
+        const base = risk.toUpperCase();
+        if (status === 'approved') return `${base} • APPROVED`;
+        if (status === 'rejected') return `${base} • REJECTED`;
+        return base;
     };
 
     if (loading) return <div id="live-activity-log"><p>Loading logs...</p></div>;
@@ -82,11 +150,29 @@ function LiveActivityLog() {
             <h2>Live Activity Log</h2>
             <div id="log-entries" ref={logContainerRef}>
                 {logs.map(log => (
-                    <div key={log.id} className="log-entry">
+                    <div key={log.id} className={getLogStatusClass(log.status, log.risk)}>
                         <span className="log-time">{log.timestamp}</span>
                         <span className="log-action">{log.action}</span>
-                        <span className={getRiskBadgeClass(log.risk)}>
-                            {log.risk.toUpperCase()}
+                        
+                        {log.risk === 'high' && log.status === 'pending' && (
+                            <div className="log-actions">
+                                <button 
+                                    className="btn-approve" 
+                                    onClick={() => handleApprove(log.id)}
+                                >
+                                    ✓ Approve
+                                </button>
+                                <button 
+                                    className="btn-reject" 
+                                    onClick={() => handleReject(log.id)}
+                                >
+                                    ✕ Reject
+                                </button>
+                            </div>
+                        )}
+                        
+                        <span className={`risk-badge risk-${log.risk}`}>
+                            {getRiskBadgeText(log.risk, log.status)}
                         </span>
                     </div>
                 ))}

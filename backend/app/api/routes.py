@@ -207,7 +207,7 @@ async def handle_text_command(payload: TextInput):
 
     # FUZZY INTERPRETATION (Reusing your existing logic)
     choices = list(COMMAND_MAP.keys())
-    result = process.extractOne(input_text, choices, scorer=fuzz.token_set_ratio)
+    result = process.extractOne(input_text, choices, scorer=fuzz.WRatio)
     
     if result:
         best_match, score = result

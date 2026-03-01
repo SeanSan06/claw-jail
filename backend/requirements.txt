@@ -8,4 +8,7 @@ uuid
 pydantic-settings
 thefuzz
 python-Levenshtein
+<<<<<<< HEAD
 google-generativeai
+=======
+>>>>>>> main

@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, Literal
+from enum import Enum
 
 from app.schemas.security import (
     CommandPayload,
@@ -20,6 +21,17 @@ from app.schemas.security import (
 )
 from app.services.ollama_assessor import assess_with_ollama
 from app.core.config import settings
+
+
+# ---------------------------------------------------------------------------
+# Routing directives for Three-Lane Hybrid
+# ---------------------------------------------------------------------------
+
+class EvaluationDirective(str, Enum):
+    """Directive returned by the evaluation router."""
+    EXECUTE = "EXECUTE"  # Lane 1: Safe path, skip AI
+    PAUSE_FOR_HUMAN = "PAUSE_FOR_HUMAN"  # Lane 3: High risk, require override
+    CONSULT_AI = "CONSULT_AI"  # Lane 2: Grey area, call distilled assessor
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +64,100 @@ def _compute_heuristic_score(command: str) -> int:
 
     # Default: unknown commands get medium score
     return 5
+
+
+def _route_evaluation(heuristic_score: int) -> EvaluationDirective:
+    """
+    Three-Lane Hybrid Routing based on heuristic score.
+    
+    Lane 1 (Fast-Path Allow): score == 1 → EXECUTE immediately
+    Lane 3 (Fast-Path Block): score >= 8 → PAUSE_FOR_HUMAN (fail-closed)
+    Lane 2 (Grey Area): 2 <= score <= 7 → CONSULT_AI (if enabled)
+    
+    Returns the directive to route the evaluation.
+    """
+    if heuristic_score == 1:
+        return EvaluationDirective.EXECUTE
+    elif heuristic_score >= 8:
+        return EvaluationDirective.PAUSE_FOR_HUMAN
+    else:
+        return EvaluationDirective.CONSULT_AI
+
+
+def _evaluate_command_with_directive(
+    command: str,
+    heuristic_score: int,
+    directive: EvaluationDirective,
+) -> tuple[int, str, str]:
+    """
+    Execute the evaluation directive and return:
+    (final_confidence_score, assessment_source, reason)
+    
+    Args:
+        command: The shell command being evaluated
+        heuristic_score: Initial heuristic score (1-10)
+        directive: Routing directive (EXECUTE, PAUSE_FOR_HUMAN, CONSULT_AI)
+    
+    Returns:
+        Tuple of (confidence_score, assessment_source, reason)
+    """
+    
+    # Lane 1: Fast-Path Allow
+    if directive == EvaluationDirective.EXECUTE:
+        return (
+            1,
+            "heuristic",
+            "Command matches safe pattern. Executing immediately."
+        )
+    
+    # Lane 3: Fast-Path Block (Fail-Closed)
+    elif directive == EvaluationDirective.PAUSE_FOR_HUMAN:
+        return (
+            9,
+            "heuristic",
+            "High-risk command detected. Pausing for human review."
+        )
+    
+    # Lane 2: Grey Area - Consult AI (if enabled)
+    elif directive == EvaluationDirective.CONSULT_AI:
+        if not settings.use_distilled_assessor:
+            # AI assessor disabled; use heuristic score as-is
+            return (
+                heuristic_score,
+                "heuristic",
+                f"Distilled assessor disabled. Using heuristic score: {heuristic_score}"
+            )
+        
+        # Call the distilled assessor with Fail-Closed error handling
+        try:
+            assessor_result = assess_with_ollama(command)
+            
+            # Extract score from response (with bounds checking)
+            ai_score = assessor_result.get("score", heuristic_score)
+            try:
+                ai_score = int(ai_score)
+                ai_score = max(1, min(10, ai_score))  # Clamp to [1, 10]
+            except (TypeError, ValueError):
+                # Malformed score; use heuristic as fallback
+                ai_score = heuristic_score
+            
+            reason = assessor_result.get("reason", "AI assessment completed.")
+            assessment_source = assessor_result.get("assessment_source", "distilled_ai")
+            
+            return (ai_score, assessment_source, reason)
+        
+        except Exception as exc:
+            # Fail-Closed: Any error in the AI assessor → HIGH RISK (score 9)
+            # This ensures we don't accidentally allow risky commands due to timeouts
+            return (
+                9,
+                "distilled_ai",
+                f"Distilled assessor error (fail-closed): {type(exc).__name__}. "
+                f"Treating as high-risk and pausing for human review."
+            )
+    
+    # Fallback (should not reach here)
+    return (heuristic_score, "heuristic", "Unknown directive; using heuristic score.")
 
 
 # ---------------------------------------------------------------------------
@@ -220,34 +326,34 @@ class RulesEngine:
     # -- Evaluation ---------------------------------------------------------
 
     def evaluate(self, payload: CommandPayload) -> ShimVerdict:
-        """Evaluate a command against the active profile's rules.
-
-        Phase 1 (Heuristic Filter):
+        """
+        Evaluate a command against the active profile's rules using Three-Lane Hybrid Routing.
+        
+        Phase 1 (Heuristic Fast-Path):
         - Compute a confidence score (1-10) using fast heuristic patterns.
-        - Evaluate against active security profile.
-        - Return verdict with score.
+        - Route to appropriate lane based on score.
+        
+        Phase 2 (Optional AI Consultation):
+        - Only consult distilled assessor for scores in the grey area (2-7).
+        - Implements Fail-Closed: AI errors → score 9 (high risk).
+        
+        Then evaluate against the active security profile's rules.
         """
         profile = self.active_profile
         command = payload.command
 
         # Phase 1: Compute heuristic score
-        confidence_score = _compute_heuristic_score(command)
+        heuristic_score = _compute_heuristic_score(command)
 
-        # Default assessment source/reason for Phase 1
-        assessment_source = "heuristic"
-        assessor_reason = None
+        # Determine routing directive
+        directive = _route_evaluation(heuristic_score)
 
-        # Phase 2 (optional): consult local distilled assessor for non-trivial commands
-        if settings.use_distilled_assessor and confidence_score > 1:
-            assessor_result = assess_with_ollama(command)
-            try:
-                confidence_score = int(assessor_result.get("score", confidence_score))
-            except Exception:
-                # keep heuristic score on parse errors
-                pass
-            assessment_source = assessor_result.get("assessment_source", "distilled_ai")
-            assessor_reason = assessor_result.get("reason")
+        # Phase 2: Execute directive (fast-path or AI consultation)
+        confidence_score, assessment_source, reason = _evaluate_command_with_directive(
+            command, heuristic_score, directive
+        )
 
+        # Phase 3: Evaluate against active profile rules
         for rule in profile.rules:
             if self._matches(rule, command):
                 verdict = ShimVerdict(
@@ -264,13 +370,12 @@ class RulesEngine:
                 return verdict
 
         # No rule matched → allow
-        final_reason = assessor_reason or "No blocking rule matched."
         verdict = ShimVerdict(
             allowed=True,
             command=command,
             mode=self._active_mode,
             matched_rule=None,
-            reason=final_reason,
+            reason=reason,
             confidence_score=confidence_score,
             assessment_source=assessment_source,
         )

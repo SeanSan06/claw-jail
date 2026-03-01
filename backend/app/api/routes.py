@@ -6,11 +6,10 @@ from thefuzz import process, fuzz
 
 router = APIRouter()
 
-# 1. LOAD THE MODEL GLOBALLY
+# LOAD THE MODEL GLOBALLY
 # 'tiny' is used because it's the fastest for CPU-only hackathon environments.
 model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
-# 2. THE COMMAND DICTIONARY
 COMMAND_MAP = {
     "activate safe mode": "MODE_SAFE",
     "go aggressive": "MODE_AGGRESSIVE",
@@ -30,32 +29,30 @@ async def handle_voice_command(file: UploadFile = File(...)):
     Receives audio from the React frontend, transcribes it, 
     and uses Fuzzy Logic to find the best matching command.
     """
-    temp_filename = f"audio_{uuid.uuid4()}.wav"
+    # FIXED: Save as .webm because that is what the React browser sends!
+    temp_filename = f"audio_{uuid.uuid4()}.webm"
     
     try:
         # Save the incoming audio blob to a temporary file
         with open(temp_filename, "wb") as f:
             f.write(await file.read())
 
-        # 3. TRANSCRIBE (THE "EARS")
-        # vad_filter=True removes silence, making it faster.
-        segments, _ = model.transcribe(temp_filename, beam_size=5, vad_filter=True)
+        # TRANSCRIBE
+        segments, _ = model.transcribe(temp_filename, beam_size=5, vad_filter=False)
         spoken_text = " ".join([s.text for s in segments]).lower().strip()
+        
+        # Print to your backend terminal so you can see exactly what the AI heard
+        print(f"--- WHISPER HEARD: '{spoken_text}' ---")
         
         if not spoken_text:
             return {"status": "empty", "message": "No speech detected."}
 
-        # 4. FUZZY INTERPRETATION (THE "BRAIN")
+        # FUZZY INTERPRETATION
         choices = list(COMMAND_MAP.keys())
-        
-        # We use token_set_ratio because it handles extra words 
-        # (e.g., "Yo bot, activate safe mode please") very well.
         result = process.extractOne(spoken_text, choices, scorer=fuzz.token_set_ratio)
         
         if result:
             best_match, score = result
-            
-            # 80 is a solid confidence threshold.
             if score >= 80:
                 found_command = COMMAND_MAP[best_match]
                 return {
@@ -66,7 +63,7 @@ async def handle_voice_command(file: UploadFile = File(...)):
                     "message": f"Command '{best_match}' recognized."
                 }
 
-        # 5. UNCERTAIN FALLBACK
+        # UNCERTAIN FALLBACK
         return {
             "status": "uncertain",
             "transcript": spoken_text,
@@ -77,6 +74,6 @@ async def handle_voice_command(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
     
     finally:
-        # Cleanup: Don't leave junk audio files on your machine
+        # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)

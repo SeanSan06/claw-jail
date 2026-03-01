@@ -4,7 +4,7 @@ function WhisperFlowChat() {
     const [input, setInput] = useState('');
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false); 
-    const [statusMsg, setStatusMsg] = useState(''); // NEW: Dedicated status/error message state
+    const [statusMsg, setStatusMsg] = useState(''); 
     
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -26,7 +26,8 @@ function WhisperFlowChat() {
             };
 
             mediaRecorderRef.current.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current);
+                // Add the type: 'audio/webm' so ffmpeg knows exactly what file this is
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 await sendAudioToBackend(audioBlob);
             };
 
@@ -118,7 +119,6 @@ function WhisperFlowChat() {
                     disabled={isProcessing}
                 />
                 
-                {/* NEW: Safe place to show errors without messing up the input box */}
                 {statusMsg && (
                     <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
                         {statusMsg}

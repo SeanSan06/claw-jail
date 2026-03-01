@@ -72,6 +72,8 @@ class ShimVerdict(BaseModel):
     mode: SecurityMode
     matched_rule: Optional[str] = None
     reason: Optional[str] = None
+    confidence_score: int = Field(default=5, ge=1, le=10, description="Risk score 1-10; 1=safe, 10=dangerous")
+    assessment_source: str = Field(default="heuristic", description="Source of assessment: 'heuristic' or 'distilled_ai'")
 
 
 class SecurityStatus(BaseModel):
@@ -80,3 +82,20 @@ class SecurityStatus(BaseModel):
     profile: SecurityProfile
     total_blocked: int = 0
     total_allowed: int = 0
+
+# ---------------------------------------------------------------------------
+# Activity Log Models
+# ---------------------------------------------------------------------------
+
+class LogEntry(BaseModel):
+    """A single log entry for activity tracking."""
+    id: int
+    timestamp: str = Field(..., description="Timestamp in HH:MM:SS format")
+    action: str = Field(..., description="The command or action performed")
+    risk: str = Field(..., description="Risk level: low, medium, or high")
+
+
+class LogResponse(BaseModel):
+    """Response containing a list of log entries."""
+    logs: list[LogEntry]
+    total: int

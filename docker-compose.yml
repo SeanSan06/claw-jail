@@ -1,0 +1,24 @@
+services:
+  openclaw:
+    build: plugin
+    ports:
+      - "127.0.0.1:18789:18789"
+    env_file:
+      - plugin/.env
+    environment:
+      - TOOL_CALL_WEBHOOK_URL=${TOOL_CALL_WEBHOOK_URL:-}
+    volumes:
+      - openclaw-data:/home/openclaw/.openclaw
+  backend:
+    build: backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+  frontend:
+    build: frontend
+    ports:
+      - "5173:5173"
+
+volumes:
+  openclaw-data:

@@ -105,16 +105,47 @@ function WhisperFlowChat() {
         }
     };
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (input.trim()) {
-            console.log("User clicked send! Final text:", input);
+            const userText = input.trim();
+            console.log("User submitted text:", userText);
             
-            // ---------------------------------------------------------
-            // Hey teammates! Pass the 'input' variable to the bot agent here!
-            // ---------------------------------------------------------
-            
+            // Clear input and status right away for a snappy UI
             setInput('');
             setStatusMsg('');
+            setIsProcessing(true);
+
+            try {
+                // Send the text payload to our new endpoint
+                const response = await fetch('http://localhost:8000/api/text-command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: userText }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Backend Text Result:", data);
+                
+                if (data.status === 'success') {
+                    // Hey teammates! Pass data.command to the bot agent here!
+                    console.log("🔥 Fuzzy matched command:", data.command);
+                    setStatusMsg(`Command recognized: ${data.command} (Confidence: ${data.confidence}%)`);
+                } else {
+                    setStatusMsg(`Unrecognized command: "${data.original_text}". Try again.`);
+                }
+                
+            } catch (error) {
+                console.error("Failed to send text to backend:", error);
+                setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 

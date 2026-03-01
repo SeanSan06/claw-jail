@@ -5,6 +5,10 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
 from thefuzz import process, fuzz
 from app.schemas.security import LogEntry, LogResponse
+from pydantic import BaseModel
+
+class TextInput(BaseModel):
+    text: str
 
 router = APIRouter()
 
@@ -12,12 +16,18 @@ router = APIRouter()
 # 'tiny' is used because it's the fastest for CPU-only hackathon environments.
 model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
+
 COMMAND_MAP = {
-    "activate safe mode": "MODE_SAFE",
-    "go aggressive": "MODE_AGGRESSIVE",
-    "clear the jail": "ACTION_CLEAR",
-    "show me the logs": "ACTION_LOGS",
-    "stop everything": "SYSTEM_HALT"
+    "safe": "MODE_SAFE",
+    "saf": "MODE_SAFE",             # Catches the exact typo you tried!
+    "flexible": "MODE_FLEXIBLE",
+    "flex": "MODE_FLEXIBLE",        # Catches "turn on flex"
+    "aggressive": "MODE_AGGRESSIVE",
+    "custom": "MODE_CUSTOM",
+    "clear": "ACTION_CLEAR",
+    "log": "ACTION_LOGS",
+    "logs": "ACTION_LOGS",
+    "stop": "SYSTEM_HALT"
 }
 
 # 3. MOCK ACTIVITY LOGS
@@ -155,11 +165,11 @@ async def handle_voice_command(file: UploadFile = File(...)):
 
         # FUZZY INTERPRETATION
         choices = list(COMMAND_MAP.keys())
-        result = process.extractOne(spoken_text, choices, scorer=fuzz.token_set_ratio)
+        result = process.extractOne(spoken_text, choices, scorer=fuzz.WRatio)
         
         if result:
             best_match, score = result
-            if score >= 80:
+            if score >= 60:
                 found_command = COMMAND_MAP[best_match]
                 return {
                     "status": "success",
@@ -183,3 +193,37 @@ async def handle_voice_command(file: UploadFile = File(...)):
         # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
+
+@router.post("/text-command")
+async def handle_text_command(payload: TextInput):
+    """
+    Receives raw text from the React frontend
+    and uses Fuzzy Logic to find the best matching command.
+    """
+    input_text = payload.text.lower().strip()
+    
+    if not input_text:
+        return {"status": "empty", "message": "No text provided."}
+
+    # FUZZY INTERPRETATION (Reusing your existing logic)
+    choices = list(COMMAND_MAP.keys())
+    result = process.extractOne(input_text, choices, scorer=fuzz.WRatio)
+    
+    if result:
+        best_match, score = result
+        if score >= 60:
+            found_command = COMMAND_MAP[best_match]
+            return {
+                "status": "success",
+                "command": found_command,
+                "original_text": input_text,
+                "confidence": score,
+                "message": f"Command '{best_match}' recognized."
+            }
+
+    # UNCERTAIN FALLBACK
+    return {
+        "status": "uncertain",
+        "original_text": input_text,
+        "message": f"'{input_text}' isn't a recognized command."
+    }

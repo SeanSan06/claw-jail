@@ -25,6 +25,7 @@ COMMAND_MAP = {
     "aggressive": "MODE_AGGRESSIVE",
     "custom": "MODE_CUSTOM",
     "clear": "ACTION_CLEAR",
+    "log": "ACTION_LOGS",
     "logs": "ACTION_LOGS",
     "stop": "SYSTEM_HALT"
 }
@@ -164,7 +165,7 @@ async def handle_voice_command(file: UploadFile = File(...)):
 
         # FUZZY INTERPRETATION
         choices = list(COMMAND_MAP.keys())
-        result = process.extractOne(spoken_text, choices, scorer=fuzz.token_set_ratio)
+        result = process.extractOne(spoken_text, choices, scorer=fuzz.WRatio)
         
         if result:
             best_match, score = result

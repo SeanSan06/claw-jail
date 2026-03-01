@@ -135,13 +135,6 @@ function LiveActivityLog() {
         return 'log-entry';
     };
 
-    const getRiskBadgeText = (risk, status) => {
-        const base = risk.toUpperCase();
-        if (status === 'approved') return `${base} • APPROVED`;
-        if (status === 'rejected') return `${base} • REJECTED`;
-        return base;
-    };
-
     if (loading) return <div id="live-activity-log"><p>Loading logs...</p></div>;
     if (error) return <div id="live-activity-log"><p>{error}</p></div>;
 
@@ -154,26 +147,35 @@ function LiveActivityLog() {
                         <span className="log-time">{log.timestamp}</span>
                         <span className="log-action">{log.action}</span>
                         
-                        {log.risk === 'high' && log.status === 'pending' && (
-                            <div className="log-actions">
-                                <button 
-                                    className="btn-approve" 
-                                    onClick={() => handleApprove(log.id)}
-                                >
-                                    ✓ Approve
-                                </button>
-                                <button 
-                                    className="btn-reject" 
-                                    onClick={() => handleReject(log.id)}
-                                >
-                                    ✕ Reject
-                                </button>
-                            </div>
-                        )}
-                        
-                        <span className={`risk-badge risk-${log.risk}`}>
-                            {getRiskBadgeText(log.risk, log.status)}
-                        </span>
+                        <div className="log-controls">
+                            {log.risk === 'high' && log.status === 'pending' && (
+                                <div className="log-actions">
+                                    <button 
+                                        className="btn-approve" 
+                                        onClick={() => handleApprove(log.id)}
+                                    >
+                                        ✓ Approve
+                                    </button>
+                                    <button 
+                                        className="btn-reject" 
+                                        onClick={() => handleReject(log.id)}
+                                    >
+                                        ✕ Reject
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {log.status === 'approved' && (
+                                <span className="status-badge status-approved">APPROVED</span>
+                            )}
+                            {log.status === 'rejected' && (
+                                <span className="status-badge status-rejected">REJECTED</span>
+                            )}
+                            
+                            <span className={`risk-badge risk-${log.risk}`}>
+                                {log.risk.toUpperCase()}
+                            </span>
+                        </div>
                     </div>
                 ))}
             </div>

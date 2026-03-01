@@ -109,9 +109,8 @@ function WhisperFlowChat() {
     const handleSend = async () => {
         if (input.trim()) {
             const userText = input.trim();
-            console.log("User submitted text:", userText);
             
-            // 1. Add the user's message to the chat UI immediately
+            // 1. Add user message to UI
             setMessages(prev => [...prev, { text: userText, sender: 'user', timestamp: new Date() }]);
             
             setInput('');
@@ -119,7 +118,7 @@ function WhisperFlowChat() {
             setIsProcessing(true);
 
             try {
-                // 2. Do your fuzzy matching trick!
+                // 2. Do the fuzzy matching!
                 const fuzzyResponse = await fetch('http://localhost:8000/api/text-command', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -134,22 +133,14 @@ function WhisperFlowChat() {
                     setStatusMsg(`Unrecognized command: "${fuzzyData.original_text}".`);
                 }
 
-                // 3. ASK GEMINI FOR A RESPONSE!
-                const aiResponse = await fetch('http://localhost:8000/api/ai/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: userText, count: 1 }),
-                });
-
-                const aiData = await aiResponse.json();
-                const botReply = aiData.results[0].text;
-
-                // 4. Add Gemini's response to the chat UI
-                setMessages(prev => [...prev, { 
-                    text: botReply, 
-                    sender: 'bot', 
-                    timestamp: new Date() 
-                }]);
+                // 3. Simple fake bot response (No more Gemini API here!)
+                setTimeout(() => {
+                    setMessages(prev => [...prev, { 
+                        text: 'Command intercepted and sent to Shim.', 
+                        sender: 'bot', 
+                        timestamp: new Date() 
+                    }]);
+                }, 1000);
                 
             } catch (error) {
                 console.error("Failed to process command:", error);

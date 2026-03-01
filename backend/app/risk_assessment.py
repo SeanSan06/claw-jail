@@ -65,44 +65,35 @@ policy_store = PolicyStore()
 
 
 def _ask_llm(command: str, heuristic_score: int) -> int | None:
-    """Call an OpenAI-compatible chat endpoint; return an integer 0-100 or None on failure."""
-    if not LLM_API_KEY:
+    """Call Gemini Flash-Lite to determine difficulty/risk on a 1-100 scale."""
+    if not settings.gemini_api_key:
         return None
 
+    # Strict prompt asking for ONLY a number from 1-100
     prompt = (
-        "You are a security risk assessor. Rate the following shell command "
-        "on a scale of 0 (completely safe) to 100 (extremely dangerous). "
-        "Respond with ONLY a single integer.\n\n"
-        f"Command: {command}\n"
-        f"Heuristic pre-score: {heuristic_score}"
-    )
-
-    body = json.dumps({
-        "model": LLM_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "max_tokens": 8,
-    }).encode()
-
-    req = request.Request(
-        url=LLM_API_URL,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {LLM_API_KEY}",
-        },
-        method="POST",
+        "You are a strict security risk assessor for a Linux shell environment. "
+        "Rate the risk of the following shell command on a scale from 1 (completely safe) to 100 (extremely dangerous/system wiping). "
+        "Respond with ONLY a single integer from 1 to 100. Do not include any other text, letters, or punctuation.\n\n"
+        f"Command: {command}"
     )
 
     try:
-        with request.urlopen(req, timeout=LLM_TIMEOUT) as resp:
-            data = json.loads(resp.read())
-            text = data["choices"][0]["message"]["content"].strip()
-            match = re.search(r"\d+", text)
-            if match:
-                return max(0, min(100, int(match.group())))
-    except Exception:
+        # Load the super-fast flash-lite model!
+        model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        response = model.generate_content(prompt)
+        
+        text = response.text.strip()
+        # Find the first number in the response
+        match = re.search(r"\d+", text)
+        if match:
+            raw_score = int(match.group())
+            # Ensure it stays within 1 to 100 bounds
+            return max(1, min(100, raw_score))
+            
+    except Exception as e:
+        print(f"Gemini fallback failed: {e}")
         pass
+        
     return None
 
 

@@ -29,26 +29,6 @@ Start the local development server with:
 npm run dev
 ```
 
-<<<<<<< HEAD
-#  Faster-whisper start up guide
-
-## Terminal 1: Start the Backend (The Brain 🧠)
-
-Open your first terminal window and run these commands one by one to start the Python server and Faster Whisper:
-
-```bash
-# 1. Go to the backend folder
-cd ~/PersonalProjects/"Irvinehacks 2026"/claude-jail/backend
-
-# 2. Activate the virtual environment
-source .venv/bin/activate
-
-# 3. Start the server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-
-The application will be available at `http://localhost:5173` (Vite's default port).
-=======
 The application will be available at `http://localhost:5173` (Vite's default port).
 
 ---
@@ -129,4 +109,3 @@ This repository intentionally does **not** track local environments, caches, or 
 If these folders/files appear in Git, remove them from tracking and commit the cleanup before pushing.
 
 ---
->>>>>>> seansan06/feature/frontend

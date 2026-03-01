@@ -3,10 +3,12 @@ try:
 except Exception:
     from pydantic import BaseSettings  # type: ignore
 
-
 class Settings(BaseSettings):
     app_name: str = "Claw Jail Backend"
     debug: bool = True
+
+    # 👇 THIS IS THE LINE THAT WAS MISSING! 👇
+    gemini_api_key: str | None = None
 
     # Distilled local assessor (Phase 2)
     use_distilled_assessor: bool = False
@@ -16,6 +18,5 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
-
 
 settings = Settings()

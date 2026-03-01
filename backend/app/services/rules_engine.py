@@ -322,6 +322,5 @@ class RulesEngine:
 
         return False
 
-
 # Module-level singleton
 engine = RulesEngine()

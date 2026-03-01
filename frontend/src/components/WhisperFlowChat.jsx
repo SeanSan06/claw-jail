@@ -1,13 +1,20 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
+    const [messages, setMessages] = useState([]);
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false); 
     const [statusMsg, setStatusMsg] = useState(''); 
     
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
+    const messagesEndRef = useRef(null);
+
+    // Auto-scroll to latest message
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const handleInputChange = (e) => {
         setInput(e.target.value);
@@ -157,7 +164,24 @@ function WhisperFlowChat() {
         <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
             
-            <div id="input-container" style={{ marginTop: 'auto' }}>
+            {/* Chat display area */}
+            <div id="chat-messages-container">
+                {messages.length === 0 ? (
+                    <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>
+                        Start a conversation...
+                    </div>
+                ) : (
+                    messages.map((msg) => (
+                        <div key={msg.id} className={`chat-message ${msg.sender}`}>
+                            <div className="message-content">{msg.text}</div>
+                            <div className="message-time">{msg.timestamp}</div>
+                        </div>
+                    ))
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+            
+            <div id="input-container">
                 <textarea
                     value={input}
                     onChange={handleInputChange}

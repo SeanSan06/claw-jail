@@ -29,21 +29,83 @@ Start the local development server with:
 npm run dev
 ```
 
-#  Faster-whisper start up guide
+The application will be available at `http://localhost:5173` (Vite's default port).
 
-## Terminal 1: Start the Backend (The Brain 🧠)
+---
 
-Open your first terminal window and run these commands one by one to start the Python server and Faster Whisper:
+## Backend Setup & Development (FastAPI + Uvicorn)
+
+### Prerequisites
+- Python 3.8+
+- pip (Python package manager)
+
+### Installing Dependencies
+
+Navigate to the backend directory:
+```bash
+cd backend
+```
+
+Create a virtual environment:
+```bash
+python3 -m venv venv
+```
+
+Activate the virtual environment:
+
+**On Linux/macOS:**
+```bash
+source venv/bin/activate
+```
+
+**On Windows:**
+```bash
+venv\Scripts\activate
+```
+
+Install all required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### Running the Backend Server
+
+Make sure your virtual environment is activated (you should see `(venv)` in your terminal prompt), then start the server:
 
 ```bash
-# 1. Go to the backend folder
-cd ~/PersonalProjects/"Irvinehacks 2026"/claude-jail/backend
+uvicorn app.main:app --reload
+```
 
-# 2. Activate the virtual environment
-source .venv/bin/activate
+The backend API will be available at `http://localhost:8000`
 
-# 3. Start the server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+**Interactive API Documentation:** Visit `http://localhost:8000/docs` (Swagger UI)
 
+### Development Workflow
 
-The application will be available at `http://localhost:5173` (Vite's default port).
+Each time you work on the backend:
+
+```bash
+cd backend
+source venv/bin/activate  # (venv\Scripts\activate on Windows)
+uvicorn app.main:app --reload
+```
+
+To deactivate the virtual environment when done:
+```bash
+deactivate
+```
+
+---
+
+## Git ignored folders/files
+
+This repository intentionally does **not** track local environments, caches, or installed dependency folders.
+
+- Python virtual environments (for example: `fastapi-env/`, `venv/`, `.venv/`, `backend/venv/`)
+- Python caches (`__pycache__/`, `*.pyc`)
+- Node dependency folders (`node_modules/`, `frontend/node_modules/`)
+- Frontend build output (`frontend/dist/`, `frontend/dist-ssr/`)
+
+If these folders/files appear in Git, remove them from tracking and commit the cleanup before pushing.
+
+---

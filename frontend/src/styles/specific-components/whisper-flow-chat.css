@@ -1,8 +1,8 @@
 /* Chat box area */
 #whisper-flow-chat-area {
-    background: #1f2937;
+    background: var(--panel-bg);
     border-radius: 8px;
-    border: 1px solid #374151;
+    border: 1px solid var(--border-color);
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -12,7 +12,7 @@
 
 #whisper-flow-chat-area h2 {
     margin: 0 0 12px 0;
-    color: #f3f4f6;
+    color: var(--text-primary);
     font-size: 18px;
 }
 
@@ -21,9 +21,9 @@
     overflow-y: auto;
     margin-bottom: 16px;
     padding: 8px;
-    background: #111827;
+    background: var(--panel-bg-alt);
     border-radius: 6px;
-    border: 1px solid #374151;
+    border: 1px solid var(--border-color);
     min-height: 0;
 }
 
@@ -37,10 +37,10 @@
 #input-container textarea {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #374151;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: #111827;
-    color: #f3f4f6;
+    background: var(--panel-bg-alt);
+    color: var(--text-primary);
     font-family: 'Courier New', monospace;
     font-size: 14px;
     resize: none;
@@ -56,7 +56,7 @@
     }
 
     #input-container textarea::placeholder {
-        color: #6b7280;
+        color: var(--text-secondary);
     }
 
 /* Button row - left and right alignment */
@@ -69,7 +69,7 @@
 /* Buttons for sending message and toggling voice input */
 #input-container button {
     padding: 10px 16px;
-    background: #3b82f6;
+    background: var(--accent-primary);
     color: #f3f4f6;
     border: none;
     border-radius: 6px;
@@ -82,11 +82,11 @@
 }
 
     #input-container button:hover {
-        background: #2563eb;
+        background: var(--accent-primary-hover);
     }
 
     #input-container button:active {
-        background: #1d4ed8;
+        background: var(--accent-primary-active);
     }
 
     #input-container button.listening {
@@ -121,8 +121,8 @@
 }
 
 .message.bot {
-    background: #374151;
-    color: #f3f4f6;
+    background: var(--button-bg);
+    color: var(--text-primary);
     align-self: flex-start;
 }
 
@@ -134,7 +134,7 @@
 
 .message-time {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--text-secondary);
     margin-top: 4px;
     align-self: flex-end;
 }

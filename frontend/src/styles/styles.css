@@ -1,27 +1,83 @@
+:root,
+[data-theme="light"] {
+    --app-bg: #f3f4f6;
+    --panel-bg: #ffffff;
+    --panel-bg-alt: #f9fafb;
+    --surface-bg: #eef2f7;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --border-color: #d1d5db;
+    --border-subtle: #e5e7eb;
+    --button-bg: #e5e7eb;
+    --button-border: #d1d5db;
+    --button-hover-bg: #dbe2ea;
+    --button-active-bg: #cfd8e3;
+    --accent-primary: #2563eb;
+    --accent-primary-hover: #1d4ed8;
+    --accent-primary-active: #1e40af;
+    --status-online: #059669;
+    --status-offline: #dc2626;
+}
+
+[data-theme="cream"] {
+    --app-bg: #f5efe2;
+    --panel-bg: #fffaf0;
+    --panel-bg-alt: #f7efd9;
+    --surface-bg: #f2e7cc;
+    --text-primary: #2f2a22;
+    --text-secondary: #5f5548;
+    --border-color: #d8cbb4;
+    --border-subtle: #e6d9c2;
+    --button-bg: #efe3cd;
+    --button-border: #d8cbb4;
+    --button-hover-bg: #e6d6ba;
+    --button-active-bg: #dcc9aa;
+    --accent-primary: #8c5e34;
+    --accent-primary-hover: #7a512d;
+    --accent-primary-active: #684425;
+    --status-online: #3b8f3f;
+    --status-offline: #b85042;
+}
+
+[data-theme="dark"] {
+    --app-bg: #111827;
+    --panel-bg: #1f2937;
+    --panel-bg-alt: #111827;
+    --surface-bg: #2d3748;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --border-subtle: #2d3748;
+    --button-bg: #374151;
+    --button-border: #4b5563;
+    --button-hover-bg: #4b5563;
+    --button-active-bg: #1f2937;
+    --accent-primary: #3b82f6;
+    --accent-primary-hover: #2563eb;
+    --accent-primary-active: #1d4ed8;
+    --status-online: #10b981;
+    --status-offline: #ef4444;
+}
+
 :root {
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
     font-weight: 400;
     font-synthesis: none;
-    text-rendering: optimizelegibility;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    color-scheme: light dark;
-    color: var(--text-color);
-    background-color: var(--tinted-bg-color);
 }
 
-body, html, #root {
+html,
+body,
+#root {
     height: 100%;
     margin: 0;
     padding: 0;
 }
 
-#home-page {
-    display: flex;
-    flex-direction: row;
-    gap: 24px;
-    padding: 24px;
-    height: 100vh;
-    box-sizing: border-box;
+body {
+    background: var(--app-bg);
+    color: var(--text-primary);
 }

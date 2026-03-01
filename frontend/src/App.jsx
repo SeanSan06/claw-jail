@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 
 import './styles/styles.css'
 import './styles/home-page.css';
+import './styles/specific-components/nav-bar.css';
 import './styles/specific-components/live-activity-log.css';
 import './styles/specific-components/whisper-flow-chat.css';
 import './styles/specific-components/security-mode-selected.css';
@@ -16,11 +17,11 @@ import './styles/specific-components/security-mode-selected.css';
 // based on the current path
 function App() {
     return (
-    <div>
-        <Routes>
-            <Route path="/" element={<HomePage />} />
-        </Routes>
-    </div>
+        <div>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+            </Routes>
+        </div>
     )
 }
 

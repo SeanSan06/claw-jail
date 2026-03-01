@@ -1,10 +1,23 @@
 """API routes for the security rules engine."""
 
 from __future__ import annotations
-
 from typing import List
-
 from fastapi import APIRouter
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Literal
+
+# Pydantic models for log entries and responses
+class LogEntry(BaseModel):
+    timestamp: datetime
+    action: str
+    risk: Literal["low", "medium", "high"]
+    
+class LogResponse(BaseModel):
+    id: int
+    timestamp: str
+    action: str
+    risk: str
 
 from app.schemas.security import (
     CommandPayload,

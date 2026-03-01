@@ -21,6 +21,38 @@ from app.schemas.security import (
 
 
 # ---------------------------------------------------------------------------
+# Heuristic scoring rules (Phase 1: Fast-path)
+# ---------------------------------------------------------------------------
+
+_SAFE_COMMANDS_PATTERN = r"^\s*(pwd|ls|whoami|echo|cat|grep|find|head|tail|wc)\s*($|\s|\|)"  # Low-risk read-only
+_MEDIUM_RISK_PATTERN = r"\b(git|npm|pip|curl|wget)\b"  # Common but potentially risky
+_HIGH_RISK_PATTERN = r"\b(rm|rmdir|dd|mkfs|chmod|chown|sudo|passwd)\b"  # Dangerous system commands
+
+
+def _compute_heuristic_score(command: str) -> int:
+    """
+    Compute a confidence score (1-10) for a command based on heuristic patterns.
+    1 = safe (low risk), 10 = dangerous (high risk).
+    """
+    cmd = command.strip()
+
+    # Safest: simple read-only commands
+    if re.match(_SAFE_COMMANDS_PATTERN, cmd, re.IGNORECASE):
+        return 1
+
+    # High risk: dangerous system commands
+    if re.search(_HIGH_RISK_PATTERN, cmd, re.IGNORECASE):
+        return 9
+
+    # Medium risk: common tools that can be risky
+    if re.search(_MEDIUM_RISK_PATTERN, cmd, re.IGNORECASE):
+        return 5
+
+    # Default: unknown commands get medium score
+    return 5
+
+
+# ---------------------------------------------------------------------------
 # Default rule sets per mode
 # ---------------------------------------------------------------------------
 
@@ -186,9 +218,18 @@ class RulesEngine:
     # -- Evaluation ---------------------------------------------------------
 
     def evaluate(self, payload: CommandPayload) -> ShimVerdict:
-        """Evaluate a command against the active profile's rules."""
+        """Evaluate a command against the active profile's rules.
+
+        Phase 1 (Heuristic Filter):
+        - Compute a confidence score (1-10) using fast heuristic patterns.
+        - Evaluate against active security profile.
+        - Return verdict with score.
+        """
         profile = self.active_profile
         command = payload.command
+
+        # Phase 1: Compute heuristic score
+        confidence_score = _compute_heuristic_score(command)
 
         for rule in profile.rules:
             if self._matches(rule, command):
@@ -198,6 +239,8 @@ class RulesEngine:
                     mode=self._active_mode,
                     matched_rule=rule.name,
                     reason=rule.description or f"Blocked by rule: {rule.name}",
+                    confidence_score=confidence_score,
+                    assessment_source="heuristic",
                 )
                 self._total_blocked += 1
                 self._audit_log.append(verdict)
@@ -210,6 +253,8 @@ class RulesEngine:
             mode=self._active_mode,
             matched_rule=None,
             reason="No blocking rule matched.",
+            confidence_score=confidence_score,
+            assessment_source="heuristic",
         )
         self._total_allowed += 1
         self._audit_log.append(verdict)

@@ -16,12 +16,17 @@ router = APIRouter()
 # 'tiny' is used because it's the fastest for CPU-only hackathon environments.
 model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
+
 COMMAND_MAP = {
-    "activate safe mode": "MODE_SAFE",
-    "go aggressive": "MODE_AGGRESSIVE",
-    "clear the jail": "ACTION_CLEAR",
-    "show me the logs": "ACTION_LOGS",
-    "stop everything": "SYSTEM_HALT"
+    "safe": "MODE_SAFE",
+    "saf": "MODE_SAFE",             # Catches the exact typo you tried!
+    "flexible": "MODE_FLEXIBLE",
+    "flex": "MODE_FLEXIBLE",        # Catches "turn on flex"
+    "aggressive": "MODE_AGGRESSIVE",
+    "custom": "MODE_CUSTOM",
+    "clear": "ACTION_CLEAR",
+    "logs": "ACTION_LOGS",
+    "stop": "SYSTEM_HALT"
 }
 
 # 3. MOCK ACTIVITY LOGS
@@ -163,7 +168,7 @@ async def handle_voice_command(file: UploadFile = File(...)):
         
         if result:
             best_match, score = result
-            if score >= 80:
+            if score >= 60:
                 found_command = COMMAND_MAP[best_match]
                 return {
                     "status": "success",
@@ -205,7 +210,7 @@ async def handle_text_command(payload: TextInput):
     
     if result:
         best_match, score = result
-        if score >= 80:
+        if score >= 60:
             found_command = COMMAND_MAP[best_match]
             return {
                 "status": "success",

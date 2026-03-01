@@ -2,163 +2,180 @@ import { useState, useEffect } from 'react';
 
 const BACKEND_URL = 'http://localhost:8000';
 
-// Preset security policies for each mode
-const MODE_POLICIES = {
-    safe: {
-        word_blacklist: ['rm', 'delete', 'remove', 'destroy', 'kill', 'shutdown', 'reboot', 'format'],
-        tool_blacklist: ['rm', 'rmdir', 'dd', 'mkfs', 'shred', 'kill', 'shutdown', 'reboot'],
-        risk_threshold: 30,
-    },
-    flexible: {
-        word_blacklist: [],
-        tool_blacklist: [],
-        risk_threshold: 70,
-    },
-    aggressive: {
-        word_blacklist: [],
-        tool_blacklist: [],
-        risk_threshold: 95,
-    },
-};
-
 function SecurityModeSelected() {
-    const [activeMode, setActiveMode] = useState('flexible');
-    const [policy, setPolicy] = useState(null);
+    const [threshold, setThreshold] = useState(70);
+    const [blocklist, setBlocklist] = useState([]);
+    const [toolBlacklist, setToolBlacklist] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch current policy on mount
+    // Fetch initial blocklist and threshold from backend
     useEffect(() => {
         const fetchPolicy = async () => {
             try {
-                const res = await fetch(`${BACKEND_URL}/policy`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setPolicy(data);
-                    // Determine which mode matches the current policy
-                    const matched = detectMode(data);
-                    setActiveMode(matched);
+                const response = await fetch(`${BACKEND_URL}/policy`);
+                if (!response.ok) {
+                    setLoading(false);
+                    return;
                 }
+                const data = await response.json();
+                setBlocklist(data.word_blacklist || []);
+                setToolBlacklist(data.tool_blacklist || []);
+                setThreshold(data.risk_threshold || 70);
+                setLoading(false);
             } catch (err) {
                 console.error('Failed to fetch policy:', err);
-            } finally {
                 setLoading(false);
             }
         };
+
         fetchPolicy();
+
+        // Poll for updates every 2 seconds
+        const interval = setInterval(fetchPolicy, 2000);
+        return () => clearInterval(interval);
     }, []);
 
-    // Detect which preset mode matches the current policy (or 'custom')
-    const detectMode = (p) => {
-        for (const [mode, preset] of Object.entries(MODE_POLICIES)) {
-            if (p.risk_threshold === preset.risk_threshold) {
-                return mode;
-            }
-        }
-        return 'custom';
-    };
+    // Handle threshold change
+    const handleThresholdChange = async (e) => {
+        const newThreshold = parseInt(e.target.value);
+        setThreshold(newThreshold);
 
-    // Apply a preset mode
-    const applyMode = async (mode) => {
-        if (mode === 'custom' || !MODE_POLICIES[mode]) return;
-
-        const newPolicy = MODE_POLICIES[mode];
         try {
-            const res = await fetch(`${BACKEND_URL}/policy`, {
+            await fetch(`${BACKEND_URL}/policy`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newPolicy),
+                body: JSON.stringify({
+                    word_blacklist: blocklist,
+                    tool_blacklist: toolBlacklist,
+                    risk_threshold: newThreshold,
+                }),
             });
-            if (res.ok) {
-                const data = await res.json();
-                setPolicy(data);
-                setActiveMode(mode);
-            }
         } catch (err) {
-            console.error('Failed to update policy:', err);
+            console.error('Failed to update threshold:', err);
         }
     };
+
+    // Handle removing item from blocklist
+    const handleRemoveFromBlocklist = async (item) => {
+        const updatedWords = blocklist.filter((entry) => entry !== item);
+        setBlocklist(updatedWords);
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/policy`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    word_blacklist: updatedWords,
+                    tool_blacklist: toolBlacklist,
+                    risk_threshold: threshold,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setBlocklist(data.word_blacklist || []);
+                setToolBlacklist(data.tool_blacklist || []);
+                setThreshold(data.risk_threshold || threshold);
+            }
+        } catch (err) {
+            console.error('Failed to remove from blocklist:', err);
+        }
+    };
+
+    // Determine which mode is active based on threshold ranges
+    const getModeStatus = (modeRange) => {
+        const [min, max] = modeRange;
+        return threshold >= min && threshold <= max;
+    };
+
+    const safeMode = getModeStatus([1, 33]);
+    const flexibleMode = getModeStatus([34, 67]);
+    const aggressiveMode = getModeStatus([68, 100]);
 
     return (
         <div id="security-modes-selected-area">
             <h2>Security Mode</h2>
 
+            {/* Safe Mode */}
             <div
                 id="security-mode-safe"
-                className={activeMode === 'safe' ? 'active' : 'inactive'}
-                title="Safe mode: low threshold (30), dangerous tools blacklisted."
-                onClick={() => applyMode('safe')}
-                style={{ cursor: 'pointer' }}
+                className={safeMode ? 'active' : 'inactive'}
+                title="Threshold 1-33: Strict security"
             >
                 <div className="mode-header">
-                    <h3>🔒 Mode: Safe</h3>
-                    {activeMode === 'safe' ? (
-                        <span className="active-label">Active</span>
-                    ) : (
-                        <span className="inactive-label">Inactive</span>
-                    )}
+                    <h3>🔒 Safe</h3>
+                    {safeMode && <span className="active-label">Active</span>}
                 </div>
-                <p>Threshold 30 — blocks destructive tools (rm, dd, kill, …)</p>
             </div>
 
+            {/* Flexible Mode */}
             <div
                 id="security-mode-flexible"
-                className={activeMode === 'flexible' ? 'active' : 'inactive'}
-                title="Flexible mode: default threshold (70), no preset blacklists."
-                onClick={() => applyMode('flexible')}
-                style={{ cursor: 'pointer' }}
+                className={flexibleMode ? 'active' : 'inactive'}
+                title="Threshold 34-67: Balanced security"
             >
                 <div className="mode-header">
-                    <h3>⚖️ Mode: Flexible</h3>
-                    {activeMode === 'flexible' ? (
-                        <span className="active-label">Active</span>
-                    ) : (
-                        <span className="inactive-label">Inactive</span>
-                    )}
+                    <h3>⚖️ Flexible</h3>
+                    {flexibleMode && <span className="active-label">Active</span>}
                 </div>
-                <p>Threshold 70 — balanced, flags high-risk commands</p>
             </div>
 
+            {/* Aggressive Mode */}
             <div
                 id="security-mode-aggressive"
-                className={activeMode === 'aggressive' ? 'active' : 'inactive'}
-                title="Aggressive mode: high threshold (95), almost nothing blocked."
-                onClick={() => applyMode('aggressive')}
-                style={{ cursor: 'pointer' }}
+                className={aggressiveMode ? 'active' : 'inactive'}
+                title="Threshold 68-100: Permissive security"
             >
                 <div className="mode-header">
-                    <h3>🔥 Mode: Aggressive</h3>
-                    {activeMode === 'aggressive' ? (
-                        <span className="active-label">Active</span>
-                    ) : (
-                        <span className="inactive-label">Inactive</span>
-                    )}
+                    <h3>🔥 Aggressive</h3>
+                    {aggressiveMode && <span className="active-label">Active</span>}
                 </div>
-                <p>Threshold 95 — permits almost everything</p>
             </div>
 
-            <div
-                id="security-mode-custom"
-                className={activeMode === 'custom' ? 'active' : 'inactive'}
-                title="Custom mode: policy set via Whisper Flow Chat."
-            >
-                <div className="mode-header">
-                    <h3>⚙️ Mode: Custom</h3>
-                    {activeMode === 'custom' ? (
-                        <span className="active-label">Active</span>
-                    ) : (
-                        <span className="inactive-label">Inactive</span>
-                    )}
+            {/* Risk Threshold Slider */}
+            <div id="threshold-container">
+                <div className="threshold-header">
+                    <h3>Risk Threshold</h3>
+                    <span className="threshold-value">{threshold}</span>
                 </div>
-                <p>Defined via Whisper Flow Chat commands</p>
+                <input 
+                    type="range" 
+                    min="1" 
+                    max="100" 
+                    value={threshold}
+                    onChange={handleThresholdChange}
+                    className="threshold-slider"
+                />
+                <div className="threshold-labels">
+                    <span>1 (Strict)</span>
+                    <span>100 (Permissive)</span>
+                </div>
             </div>
 
-            {policy && (
-                <div id="current-policy-summary" style={{ marginTop: '12px', fontSize: '13px', opacity: 0.8 }}>
-                    <strong>Current policy:</strong> threshold {policy.risk_threshold},
-                    {' '}{policy.tool_blacklist.length} tools blacklisted,
-                    {' '}{policy.word_blacklist.length} words blacklisted
-                </div>
-            )}
+            {/* Block List Display */}
+            <div id="blocklist-container">
+                <h3>Block List</h3>
+                {loading ? (
+                    <p className="blocklist-empty">Loading...</p>
+                ) : blocklist.length === 0 ? (
+                    <p className="blocklist-empty">No blocked items yet. Add items via chat.</p>
+                ) : (
+                    <div className="blocklist-items">
+                        {blocklist.map((item, index) => (
+                            <div key={index} className="blocklist-item">
+                                <span className="blocklist-text">{item}</span>
+                                <button 
+                                    className="blocklist-remove"
+                                    onClick={() => handleRemoveFromBlocklist(item)}
+                                    title="Remove from blocklist"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

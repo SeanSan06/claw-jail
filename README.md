@@ -1,111 +1,177 @@
-# claude-jail
-A security tool for keeping track of what Clawbot is doing in real time
+# Claw-Jail 🔒
 
-# How It Works
-Claude-jail is a high-security middleware between the AI agent and the local system. It monitors AI's thoughts and action. It ensures the AI does not do anything malicious behind the user's back. 
+A real-time security middleware dashboard for monitoring and controlling what ClawBot does on your system.
 
-The Security Pipeline
+## What It Does
 
-1. The OpenClaw interface, built with react, is the primary point, where user issues commands such as "fix this bug" or "run this command". 
-2. All commands get intercepted by the gateway aka the middleman. This component's job is to manage the flow between the UI and the underlying agent. 
-3. The Agent also known as then recieves this instruction from the gateway. It then asks the llm to generate the logic behind the command. 
-4. Before the agent executes this logic, it sends this information as a JSON to the proxy/shim. This is where the core "jail" mechanics work. 
-5. The Shim will push every intended action towards the security dashboard, where it logs information. The security dashboard will then add a security rule to prevent the command from doing something its not suppose to do. An IT Manager will overlook this whole process with the Shim and the security dashboard. IT Manager will modify security dashboard as needed.. 
-6. Finally, once the action passes the gateway and the human-governed security rules, it finally reaches the Bash terminal for the final execution of running the command. 
+Claw-Jail operates as a security middleware layer between the AI agent and the host system — a digital "black box" that monitors an AI's internal chain of thought and planned actions in real-time. Through a live dashboard, it ensures the agent never executes malicious commands or exceeds its authorization without oversight.
 
-## Frontend Setup & Development (React + Vite)
-### Installing Dependencies
-To install all frontend dependencies, navigate to the frontend directory and run:
+- **Keyword Watchlist** — Input specific keywords or phrases to monitor. Any matching action is automatically flagged.
+- **Risk Scoring** — Every tool ClawBot attempts to run is instantly assigned a risk score from 1–100.
+- **Threshold Slider** — Set your security tolerance. If an action's risk score exceeds the threshold, ClawBot is paused and the user must manually approve or reject it.
+- **Human-in-the-Loop** — A definitive safety gate before ClawBot is permitted to continue its task.
+- **Light/Dark Mode** — Clean dashboard with theme toggle.
+
+---
+
+## How It Works (The Security Pipeline)
+
+1. **OpenClaw Interface** — The React-based UI where users issue commands like "fix this bug" or "run this command."
+2. **Gateway (Middleman)** — Intercepts all commands and manages flow between the UI and the underlying agent.
+3. **Agent** — Receives instructions from the gateway and asks the LLM to generate the logic behind the command.
+4. **Proxy/Shim (The Jail)** — Before the agent executes any logic, it sends a JSON payload to the shim. This is where the core "jail" mechanics work.
+5. **Security Dashboard** — The shim pushes every intended action to the dashboard, which logs it, scores it, and applies security rules. An IT Manager oversees this process and can modify rules as needed.
+6. **Bash Terminal** — Only after passing the gateway and human-governed security rules does the action reach the terminal for final execution.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React + Vite |
+| Backend | Python + FastAPI |
+| Infrastructure | Docker + GitHub Actions (CI) |
+| AI Agent | ClawBot |
+| Voice Input | Wispr Flow |
+| Risk Assessment | Gemini 1.5 Flash |
+| Real-Time Comms | WebSockets |
+
+---
+
+## Challenges
+
+- **Intercepting agent internals** is hard! Our first proxy/shim approach failed because raw commands to ClawBot's internal LLM weren't visible and documentation was sparse. We pivoted to a **custom log-interception plugin** that hooks directly into the tool-execution pipeline, capturing intent before it becomes action.
+- **Real-time data transfer** required learning and implementing WebSockets to maintain a persistent connection between the frontend and backend.
+
+---
+
+## Running with Docker (Recommended)
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+### Start Everything
+
+```bash
+docker compose up --build -d
+```
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
+- FastAPI Docs (Swagger): `http://localhost:8000/docs`
+
+### Stop Everything
+
+```bash
+docker compose down
+```
+
+### Full Clean Reset (wipe volumes + rebuild from scratch)
+
+```bash
+docker compose down -v
+docker compose up --build --no-cache -d
+```
+
+> Use this after pulling new changes from teammates to ensure your images and containers are fully in sync.
+
+### View Logs
+
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f backend
+docker compose logs -f frontend
+```
+
+---
+
+## Local Development (Without Docker)
+
+### Frontend (React + Vite)
+
+**Prerequisites:** Node.js 18+
 
 ```bash
 cd frontend
 npm install
-```
-
-### Running the Development Server
-Start the local development server with:
-
-```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173` (Vite's default port).
+Frontend will be available at `http://localhost:5173`
 
 ---
 
-## Backend Setup & Development (FastAPI + Uvicorn)
+### Backend (FastAPI + Uvicorn)
 
-### Prerequisites
-- Python 3.8+
-- pip (Python package manager)
+**Prerequisites:** Python 3.12+
 
-### Installing Dependencies
-
-Navigate to the backend directory:
 ```bash
 cd backend
-```
-
-Create a virtual environment:
-```bash
 python3 -m venv venv
-```
-
-Activate the virtual environment:
-
-**On Linux/macOS:**
-```bash
-source venv/bin/activate
-```
-
-**On Windows:**
-```bash
-venv\Scripts\activate
-```
-
-Install all required dependencies:
-```bash
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### Running the Backend Server
-
-Make sure your virtual environment is activated (you should see `(venv)` in your terminal prompt), then start the server:
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-The backend API will be available at `http://localhost:8000`
+Backend API will be available at `http://localhost:8000`
 
-**Interactive API Documentation:** Visit `http://localhost:8000/docs` (Swagger UI)
+**Interactive API Docs:** `http://localhost:8000/docs`
 
-### Development Workflow
-
-Each time you work on the backend:
+#### Each time you return to work on the backend:
 
 ```bash
 cd backend
-source venv/bin/activate  # (venv\Scripts\activate on Windows)
+source venv/bin/activate
 uvicorn app.main:app --reload
 ```
 
-To deactivate the virtual environment when done:
+To deactivate when done:
+
 ```bash
 deactivate
 ```
 
 ---
 
-## Git ignored folders/files
+## Environment Variables
 
-This repository intentionally does **not** track local environments, caches, or installed dependency folders.
+Copy the example env file and fill in your values:
 
-- Python virtual environments (for example: `fastapi-env/`, `venv/`, `.venv/`, `backend/venv/`)
-- Python caches (`__pycache__/`, `*.pyc`)
-- Node dependency folders (`node_modules/`, `frontend/node_modules/`)
-- Frontend build output (`frontend/dist/`, `frontend/dist-ssr/`)
-
-If these folders/files appear in Git, remove them from tracking and commit the cleanup before pushing.
+```bash
+cp backend/.env.example backend/.env
+```
 
 ---
+
+## Git Ignored Folders
+
+This repository intentionally does **not** track the following:
+
+| Path | Reason |
+|---|---|
+| `venv/`, `.venv/`, `backend/venv/` | Python virtual environments |
+| `__pycache__/`, `*.pyc` | Python bytecode cache |
+| `node_modules/`, `frontend/node_modules/` | Node dependencies |
+| `frontend/dist/`, `frontend/dist-ssr/` | Frontend build output |
+| `backend/.env` | Secrets and API keys |
+
+If these appear in Git, remove them from tracking before pushing:
+
+```bash
+git rm -r --cached node_modules
+git rm -r --cached backend/venv
+git commit -m "remove ignored files from tracking"
+```
+
+---
+
+## What's Next
+
+- Polish the dashboard with more monitoring components
+- Add more granular security rules per tool type
+- Allow for wider range of commands to be inputed

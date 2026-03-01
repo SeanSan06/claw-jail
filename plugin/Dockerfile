@@ -14,8 +14,9 @@ RUN npm install -g --no-audit --no-fund --fetch-retries=5 --fetch-timeout=300000
       openclaw@latest \
   && npm cache clean --force
 
-COPY --chown=openclaw:openclaw index.ts openclaw.plugin.json package.json \
+COPY --chown=openclaw:openclaw openclaw.plugin.json package.json tsconfig.json \
      /opt/openclaw-plugin/
+COPY --chown=openclaw:openclaw src/ /opt/openclaw-plugin/src/
 
 # Pre-create the data dir so Docker copies ownership to fresh named volumes
 RUN mkdir -p /home/openclaw/.openclaw/workspace \
@@ -57,9 +58,10 @@ if [ ! -d "$DATA/extensions/$PLUGIN_ID" ]; then
   openclaw plugins install /opt/openclaw-plugin
   # Fix install hint: unset npm-name entry, set manifest-id entry
   openclaw config unset plugins.entries.openclaw-tool-call-logger 2>/dev/null || true
-  openclaw config set plugins.entries.${PLUGIN_ID}.enabled         true  --strict-json
-  openclaw config set plugins.entries.${PLUGIN_ID}.config.logResults true  --strict-json
-  openclaw config set plugins.entries.${PLUGIN_ID}.config.verbose   false --strict-json
+  openclaw config set plugins.entries.${PLUGIN_ID}.enabled true --strict-json
+  if [ -n "${TOOL_CALL_WEBHOOK_URL:-}" ]; then
+    openclaw config set plugins.entries.${PLUGIN_ID}.config.webhookUrl "${TOOL_CALL_WEBHOOK_URL}"
+  fi
 fi
 
 # ── Launch ───────────────────────────────────────────────────

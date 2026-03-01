@@ -7,7 +7,6 @@ A simple [OpenClaw](https://github.com/openclaw/openclaw) plugin that intercepts
 | Hook | Behaviour |
 |---|---|
 | `before_tool_call` | Logs the full event payload before the tool executes. When `requireApproval` is enabled, **blocks** until the webhook responds with `{ "approve": true }`. |
-| `after_tool_call` | Logs the full event payload (including result) after the tool executes |
 
 Each event is wrapped in an envelope:
 
@@ -27,8 +26,7 @@ plugin/
 │   ├── index.ts        # Plugin entry-point (register function)
 │   ├── types.ts        # Shared TypeScript types
 │   ├── envelope.ts     # Envelope builder
-│   ├── gate.ts         # Approval gate (blocks until webhook responds)
-│   └── webhook.ts      # Fire-and-forget HTTP webhook sender
+│   └── gate.ts         # Approval gate (blocks until webhook responds)
 ├── test-server.mjs     # Interactive webhook test server with approval prompts
 ├── openclaw.plugin.json
 ├── package.json
@@ -83,9 +81,7 @@ Add to `~/.openclaw/openclaw.json`:
       "tool-call-logger": {
         "enabled": true,
         "config": {
-          "webhookUrl": "http://localhost:4000",   // HTTP endpoint to POST events to
-          "requireApproval": true,                 // block tool calls until webhook approves (default: false)
-          "approvalTimeoutMs": 30000               // timeout before blocking (default: 30000)
+          "webhookUrl": "http://localhost:4000"
         }
       }
     }
@@ -93,11 +89,11 @@ Add to `~/.openclaw/openclaw.json`:
 }
 ```
 
-The webhook URL can also be set via the `TOOL_CALL_WEBHOOK_URL` environment variable. If neither is set, events are logged to the console only.
+The webhook URL can also be set via the `TOOL_CALL_WEBHOOK_URL` environment variable. If neither is set, all tool calls will be blocked.
 
 ## Approval gate
 
-When `requireApproval` is `true`, every `before_tool_call` event is sent to the webhook and the plugin **blocks execution** until it receives a JSON response:
+Every `before_tool_call` event is sent to the webhook and the plugin **blocks execution** until it receives a JSON response:
 
 ### Approve
 

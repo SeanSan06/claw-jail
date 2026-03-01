@@ -1,13 +1,40 @@
 # Tool Call Logger — OpenClaw Plugin
 
-A simple [OpenClaw](https://github.com/openclaw/openclaw) plugin that intercepts every agent tool call and prints it to the console. Useful for debugging, auditing, and understanding what the agent is doing in real time.
+A simple [OpenClaw](https://github.com/openclaw/openclaw) plugin that intercepts every agent tool call and forwards a JSON envelope to the console **and** (optionally) to an HTTP webhook. Useful for debugging, auditing, and understanding what the agent is doing in real time.
 
 ## What it does
 
 | Hook | Behaviour |
 |---|---|
-| `before_tool_call` | Logs tool name, call ID, and parameter keys (or full params in verbose mode) |
-| `after_tool_call` | Logs tool name, call ID, status (OK / ERR), and a result preview |
+| `before_tool_call` | Logs the full event payload before the tool executes |
+| `after_tool_call` | Logs the full event payload (including result) after the tool executes |
+
+Each event is wrapped in an envelope:
+
+```json
+{
+  "hook": "before_tool_call",
+  "timestamp": "2026-02-28T12:00:00.000Z",
+  "event": { "...original event from OpenClaw..." }
+}
+```
+
+## Project structure
+
+```
+plugin/
+├── src/
+│   ├── index.ts        # Plugin entry-point (register function)
+│   ├── types.ts        # Shared TypeScript types
+│   ├── envelope.ts     # Envelope builder
+│   └── webhook.ts      # HTTP webhook sender
+├── test-server.mjs     # Standalone webhook test server
+├── index.ts            # Re-export shim (backward compat)
+├── openclaw.plugin.json
+├── package.json
+├── tsconfig.json
+└── Dockerfile
+```
 
 ## Install
 
@@ -27,7 +54,7 @@ Then restart the Gateway.
 
 ## Docker (OpenClaw + this plugin)
 
-From /plugin:
+From `/plugin`:
 
 ```bash
 docker build -t claw-jail-openclaw .
@@ -39,8 +66,7 @@ docker run --rm \
 
 Why `127.0.0.1:18789:18789`?
 
-- It publishes the gateway to loopback only, so it is accessible from your host machine.
-- It is not exposed on your LAN interfaces.
+- Publishes the gateway to loopback only — accessible from your host but not your LAN.
 
 Gateway URL from your host:
 
@@ -57,8 +83,7 @@ Add to `~/.openclaw/openclaw.json`:
       "tool-call-logger": {
         "enabled": true,
         "config": {
-          "logResults": true,   // log after_tool_call events (default: true)
-          "verbose": false      // full params + results in output (default: false)
+          "webhookUrl": "http://localhost:4000"   // optional — HTTP endpoint to POST events to
         }
       }
     }
@@ -66,25 +91,12 @@ Add to `~/.openclaw/openclaw.json`:
 }
 ```
 
-## Example output
+The webhook URL can also be set via the `TOOL_CALL_WEBHOOK_URL` environment variable. If neither is set, events are logged to the console only.
 
-```
-[tool-call-logger] ▶ CALL  tool=bash id=call_abc123 paramKeys=[command]
-[tool-call-logger] ◀ OK    tool=bash id=call_abc123 preview={"content":[{"type":"text","text":"Hello world\n"}]}
-```
+## Development
 
-With `verbose: true`:
-
-```
-[tool-call-logger] ▶ CALL  tool=bash id=call_abc123 params={
-  "command": "echo Hello world"
-}
-[tool-call-logger] ◀ OK    tool=bash id=call_abc123 result={
-  "content": [
-    {
-      "type": "text",
-      "text": "Hello world\n"
-    }
-  ]
-}
+```bash
+npm install
+npm run typecheck   # type-check without emitting
+npm run build       # compile to dist/
 ```

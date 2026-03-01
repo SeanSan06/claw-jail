@@ -6,24 +6,16 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "logResults": {
-        "type": "boolean",
-        "description": "Also log tool results after execution (default: true)"
-      },
-      "verbose": {
-        "type": "boolean",
-        "description": "Include full tool parameters and results in output (default: false)"
+      "webhookUrl": {
+        "type": "string",
+        "description": "HTTP URL to POST tool call events to (overrides TOOL_CALL_WEBHOOK_URL env var)"
       }
     }
   },
   "uiHints": {
-    "logResults": {
-      "label": "Log Results",
-      "help": "Log tool results after execution completes"
-    },
-    "verbose": {
-      "label": "Verbose Output",
-      "help": "Include full tool parameters and results in console output"
+    "webhookUrl": {
+      "label": "Webhook URL",
+      "help": "HTTP endpoint that receives full tool call event payloads as JSON POST requests"
     }
   }
 }

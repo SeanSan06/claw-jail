@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
+    const [messages, setMessages] = useState([]); // <-- ADDED THIS BACK!
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false); 
     const [statusMsg, setStatusMsg] = useState(''); 
@@ -26,7 +27,6 @@ function WhisperFlowChat() {
             };
 
             mediaRecorderRef.current.onstop = async () => {
-                // Add the type: 'audio/webm' so ffmpeg knows exactly what file this is
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 await sendAudioToBackend(audioBlob);
             };
@@ -76,7 +76,7 @@ function WhisperFlowChat() {
             
             if (data.transcript) {
                 setInput(data.transcript); 
-                setStatusMsg(''); // Success, no error message needed
+                setStatusMsg(''); 
             } else if (data.status === "empty") {
                 setStatusMsg("Could not hear you. Please try again.");
             }
@@ -91,14 +91,9 @@ function WhisperFlowChat() {
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
-            if (e.ctrlKey || e.metaKey) {
-                // Ctrl/Cmd + Enter: allow newline (default behavior)
-                return;
-            } else if (e.shiftKey) {
-                // Shift + Enter: allow newline (default behavior)
-                return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                return; // allow newline
             } else {
-                // Just Enter: send message
                 e.preventDefault();
                 handleSend();
             }
@@ -110,39 +105,49 @@ function WhisperFlowChat() {
             const userText = input.trim();
             console.log("User submitted text:", userText);
             
-            // Clear input and status right away for a snappy UI
+            // 1. Add the user's message to the chat UI immediately
+            setMessages(prev => [...prev, { text: userText, sender: 'user', timestamp: new Date() }]);
+            
             setInput('');
             setStatusMsg('');
             setIsProcessing(true);
 
             try {
-                // Send the text payload to our new endpoint
-                const response = await fetch('http://localhost:8000/api/text-command', {
+                // 2. Do your fuzzy matching trick!
+                const fuzzyResponse = await fetch('http://localhost:8000/api/text-command', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: userText }),
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
+                const fuzzyData = await fuzzyResponse.json();
+                
+                if (fuzzyData.status === 'success') {
+                    setStatusMsg(`Command recognized: ${fuzzyData.command} (Confidence: ${fuzzyData.confidence}%)`);
+                } else {
+                    setStatusMsg(`Unrecognized command: "${fuzzyData.original_text}".`);
                 }
 
-                const data = await response.json();
-                console.log("Backend Text Result:", data);
-                
-                if (data.status === 'success') {
-                    // Hey teammates! Pass data.command to the bot agent here!
-                    console.log("🔥 Fuzzy matched command:", data.command);
-                    setStatusMsg(`Command recognized: ${data.command} (Confidence: ${data.confidence}%)`);
-                } else {
-                    setStatusMsg(`Unrecognized command: "${data.original_text}". Try again.`);
-                }
+                // 3. ASK GEMINI FOR A RESPONSE!
+                const aiResponse = await fetch('http://localhost:8000/api/ai/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: userText, count: 1 }),
+                });
+
+                const aiData = await aiResponse.json();
+                const botReply = aiData.results[0].text;
+
+                // 4. Add Gemini's response to the chat UI
+                setMessages(prev => [...prev, { 
+                    text: botReply, 
+                    sender: 'bot', 
+                    timestamp: new Date() 
+                }]);
                 
             } catch (error) {
-                console.error("Failed to send text to backend:", error);
-                setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
+                console.error("Failed to process command:", error);
+                setStatusMsg("Error: Could not connect to backend.");
             } finally {
                 setIsProcessing(false);
             }
@@ -156,6 +161,18 @@ function WhisperFlowChat() {
     return (
         <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
+
+            {/* ADDED THE CHAT UI BACK SO MESSAGES ACTUALLY SHOW UP */}
+            <div id="chat-container">
+                {messages.map((msg, index) => (
+                    <div key={index} className={`message ${msg.sender}`}>
+                        <span className="message-text">{msg.text}</span>
+                        <span className="message-time">
+                            {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                ))}
+            </div>
             
             <div id="input-container" style={{ marginTop: 'auto' }}>
                 <textarea

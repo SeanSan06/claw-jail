@@ -1,7 +1,9 @@
 import os
 import uuid
+from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
+from app.schemas.security import LogEntry, LogResponse
 
 router = APIRouter()
 
@@ -23,10 +25,76 @@ COMMAND_MAP = {
     "stop everything": "SYSTEM_HALT"
 }
 
+# 3. MOCK ACTIVITY LOGS
+# These will eventually come from the rules_engine.py and shim.py
+# For now, this is just test data to populate the frontend
+ACTIVITY_LOGS = [
+    LogEntry(id=1, timestamp="14:32:05", action="Read file: config.json", risk="low"),
+    LogEntry(id=2, timestamp="14:32:08", action="Execute: npm install", risk="medium"),
+    LogEntry(id=3, timestamp="14:32:12", action="Delete directory: /tmp/cache", risk="high"),
+    LogEntry(id=4, timestamp="14:32:15", action="Read environment variables", risk="medium"),
+    LogEntry(id=5, timestamp="14:32:18", action="Access /etc/passwd", risk="high"),
+]
+
 @router.get("/health")
 async def health():
     """Check if the backend is alive."""
     return {"status": "online", "model_loaded": "tiny"}
+
+
+@router.get("/logs", response_model=LogResponse)
+async def get_logs():
+    """
+    Fetch all activity logs.
+    
+    This endpoint returns a list of security-related activities logged by the system.
+    Each log entry contains:
+    - id: Unique identifier
+    - timestamp: When the action occurred (HH:MM:SS format)
+    - action: Description of what happened
+    - risk: Risk level (low, medium, high)
+    
+    TODO: Replace ACTIVITY_LOGS with real data from rules_engine.py
+    """
+    return LogResponse(logs=ACTIVITY_LOGS, total=len(ACTIVITY_LOGS))
+
+
+@router.post("/logs/add")
+async def add_log(action: str, risk: str):
+    """
+    Add a new log entry.
+    
+    Parameters:
+    - action: Description of the command/action
+    - risk: Risk level (must be 'low', 'medium', or 'high')
+    
+    This endpoint is called when a new command is executed and needs to be logged.
+    The timestamp is generated automatically.
+    """
+    if risk not in ["low", "medium", "high"]:
+        raise HTTPException(status_code=400, detail="Risk must be 'low', 'medium', or 'high'")
+    
+    # Generate new log entry
+    new_log = LogEntry(
+        id=len(ACTIVITY_LOGS) + 1,
+        timestamp=datetime.now().strftime("%H:%M:%S"),
+        action=action,
+        risk=risk
+    )
+    ACTIVITY_LOGS.append(new_log)
+    
+    return new_log
+
+
+@router.delete("/logs/clear")
+async def clear_logs():
+    """
+    Clear all activity logs.
+    Useful for testing or resetting the system state.
+    """
+    global ACTIVITY_LOGS
+    ACTIVITY_LOGS = []
+    return {"message": "All logs cleared", "total": 0}
 
 @router.post("/voice-command")
 async def handle_voice_command(file: UploadFile = File(...)):

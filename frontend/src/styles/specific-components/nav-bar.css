@@ -8,6 +8,7 @@
     padding: 0 20px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-color);
+    border-radius: 8px;
 }
 
 #nav-bar-title {

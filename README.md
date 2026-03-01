@@ -4,7 +4,7 @@ A real-time security middleware dashboard for monitoring and controlling what Cl
 
 ## What It Does
 
-Claw-Jail operates as a security middleware layer between the AI agent and the host system — a digital "black box" that monitors an AI's internal chain of thought and planned actions in real-time. Through a live dashboard, it ensures the agent never executes malicious commands or exceeds its authorization without oversight.
+Claw-Jail operates as a security middleware layer between the AI agent and the host system. It acts as a digital "black box" that monitors an AI's internal chain of thought and planned actions in real-time. Through a live dashboard, it ensures the agent never executes malicious commands or exceeds its authorization without oversight.
 
 - **Keyword Watchlist** — Input specific keywords or phrases to monitor. Any matching action is automatically flagged.
 - **Risk Scoring** — Every tool ClawBot attempts to run is instantly assigned a risk score from 1–100.
@@ -18,9 +18,9 @@ Claw-Jail operates as a security middleware layer between the AI agent and the h
 
 1. **OpenClaw Interface** — The React-based UI where users issue commands like "fix this bug" or "run this command."
 2. **Gateway (Middleman)** — Intercepts all commands and manages flow between the UI and the underlying agent.
-3. **Agent** — Receives instructions from the gateway and asks the LLM to generate the logic behind the command.
-4. **Proxy/Shim (The Jail)** — Before the agent executes any logic, it sends a JSON payload to the shim. This is where the core "jail" mechanics work.
-5. **Security Dashboard** — The shim pushes every intended action to the dashboard, which logs it, scores it, and applies security rules. An IT Manager oversees this process and can modify rules as needed.
+3. **Agent (OpenClaw)** — Receives instructions from the gateway and asks the LLM to generate the logic behind the command.
+4. **Pluggin (The Jail)** — Before the agent executes any logic, the pluggin captures the tool and runs it againsts the risk checker. If it goes above the threshold it lets the users aprove or reject the tool within the log area. This allows the user to decide if OpenClaw should run it or not.
+5. **Security Dashboard** — The FastAPI backend pushes every intended action to the dashboard, which logs it, scores it, and applies security rules. The user such as an IT Manager oversees this process and can modify rules as needed.
 6. **Bash Terminal** — Only after passing the gateway and human-governed security rules does the action reach the terminal for final execution.
 
 ---
@@ -175,3 +175,4 @@ git commit -m "remove ignored files from tracking"
 - Polish the dashboard with more monitoring components
 - Add more granular security rules per tool type
 - Allow for wider range of commands to be inputed
+- Add more modes/presets

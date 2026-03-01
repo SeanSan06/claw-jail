@@ -93,10 +93,10 @@ function WhisperFlowChat() {
 
             if (data.transcript) {
                 addMessage(`🎙️ "${data.transcript}"`, 'user');
-                addMessage(`Policy updated. Blacklisted words: ${data.policy.word_blacklist.join(', ') || 'none'}. Blacklisted tools: ${data.policy.tool_blacklist.join(', ') || 'none'}. Threshold: ${data.policy.risk_threshold}.`, 'bot');
+                addMessage(`Got it. "${data.transcript}" was added to the block list policy.`, 'assistant');
             } else {
                 addMessage('🎙️ (no speech detected)', 'user');
-                addMessage("Could not hear you. Please try again.", 'bot');
+                addMessage("Could not hear you. Please try again.", 'assistant');
             }
         } catch (error) {
             console.error("Upload failed:", error);
@@ -142,12 +142,12 @@ function WhisperFlowChat() {
                 console.log("Policy update result:", data);
 
                 addMessage(
-                    `Policy updated. Blacklisted words: ${data.policy.word_blacklist.join(', ') || 'none'}. Blacklisted tools: ${data.policy.tool_blacklist.join(', ') || 'none'}. Threshold: ${data.policy.risk_threshold}.`,
-                    'bot'
+                    `Got it. "${userText}" is now added to the block list policy.`,
+                    'assistant'
                 );
             } catch (error) {
                 console.error("Failed to send text to backend:", error);
-                addMessage("Error: Could not connect to backend.", 'bot');
+                addMessage("Error: Could not connect to backend.", 'assistant');
             } finally {
                 setIsProcessing(false);
             }

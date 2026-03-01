@@ -200,6 +200,11 @@
     color: #6ee7b7;
 }
 
+.risk-badge.risk-unknown {
+    background: rgba(139, 92, 246, 0.2);
+    color: #c4b5fd;
+}
+
 #log-entries::-webkit-scrollbar {
     width: 8px;
 }

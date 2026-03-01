@@ -120,9 +120,15 @@ function LiveActivityLog() {
     };
 
     const getRiskClass = (score) => {
-        if (score >= 70) return 'high';
-        if (score >= 40) return 'medium';
+        if (score === null || score === undefined || score === 'N/A') return 'unknown';
+        if (score >= 68) return 'high';
+        if (score >= 34) return 'medium';
         return 'low';
+    };
+
+    const getRiskDisplay = (score) => {
+        if (score === null || score === undefined) return 'N/A';
+        return score;
     };
 
     const getEntryClass = (log) => {
@@ -190,7 +196,7 @@ function LiveActivityLog() {
                             )}
 
                             <span className={`risk-badge risk-${getRiskClass(log.risk_score)}`}>
-                                {log.risk_score}
+                                {getRiskDisplay(log.risk_score)}
                             </span>
                         </div>
                     </div>

@@ -3,26 +3,38 @@ from typing import List
 from app.schemas import AIResult, Item
 from app.core.config import settings
 
-# 1. Tell Gemini to use the API key from your .env file!
+# 1. Tell Gemini to use the API key from your .env file
 if settings.gemini_api_key:
     genai.configure(api_key=settings.gemini_api_key)
 
-# 2. Load the smart model
-model = genai.GenerativeModel('gemini-2.5-flash')
+# 2. Give the AI its personality and rules!
+system_prompt = """
+You are 'Clawbot', the AI security assistant for the 'Claw Jail' application.
+Claw Jail is a high-security tool that monitors AI agents and manages file system permissions.
+Users will ask you to change security modes (Safe, Flexible, Aggressive, Custom) or ask about system logs.
+Your job is to acknowledge their requests in-character as a helpful, slightly technical security monitor. 
+Keep your answers brief (1-2 sentences). 
+Never say you 'cannot directly activate' something, because the backend system handles the actual execution. Just confirm the user's intent.
+"""
+
+# 3. Load the smart model WITH the system instruction
+model = genai.GenerativeModel(
+    'gemini-2.5-flash',
+    system_instruction=system_prompt
+)
 
 def generate_ai_responses(prompt: str, count: int = 1) -> List[AIResult]:
     """Generate REAL AI responses using Gemini."""
     
-    # Safety check in case the .env file is missing
     if not settings.gemini_api_key:
         return [AIResult(id=1, text="Error: GEMINI_API_KEY is missing from the backend .env file!", metadata={"source": "error"})]
 
     results = []
     try:
-        # 3. Send the user's prompt to Gemini!
+        # Send the user's prompt to Gemini
         response = model.generate_content(prompt)
         
-        # 4. Package the response up for React
+        # Package the response up for React
         results.append(AIResult(id=1, text=response.text, metadata={"source": "gemini"}))
         
     except Exception as e:

@@ -2,6 +2,8 @@
 
 A real-time security middleware dashboard for monitoring and controlling what ClawBot does on your system.
 
+![Dashboard Screenshot](./frontend/src/assets/dashboard-example.png)
+
 ## What It Does
 
 Claw-Jail operates as a security middleware layer between the AI agent and the host system — a digital "black box" that monitors an AI's internal chain of thought and planned actions in real-time. Through a live dashboard, it ensures the agent never executes malicious commands or exceeds its authorization without oversight.

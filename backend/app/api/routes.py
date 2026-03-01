@@ -19,9 +19,25 @@ import uuid
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
 
+import json as _json
+
 from app.models import ChatLogMessage, SecurityPolicy, WebhookEnvelope, ApprovalResponse
 from app.risk_assessment import compute_risk, policy_store
 from app.api.websocket import command_queue
+
+
+def _flatten_values(obj) -> list[str]:
+    """Recursively extract all scalar values from nested dicts/lists."""
+    parts: list[str] = []
+    if isinstance(obj, dict):
+        for v in obj.values():
+            parts.extend(_flatten_values(v))
+    elif isinstance(obj, (list, tuple)):
+        for item in obj:
+            parts.extend(_flatten_values(item))
+    elif obj is not None:
+        parts.append(str(obj))
+    return parts
 
 router = APIRouter()
 
@@ -44,13 +60,17 @@ async def receive_command(envelope: WebhookEnvelope):
     request_id = str(uuid.uuid4())
 
     # Build a representative command string for risk scoring.
+    # Recursively flatten all nested values so blacklist words are caught
+    # regardless of nesting depth.
     if event.input:
-        command_str = f"{event.toolName} {' '.join(str(v) for v in event.input.values())}"
+        flat_vals = _flatten_values(event.input)
+        command_str = f"{event.toolName} {' '.join(flat_vals)}"
     else:
         command_str = event.toolName
 
     # --- Blacklisted tool: block immediately, notify frontend ---
-    if event.toolName in policy_store.policy.tool_blacklist:
+    tool_name_lower = event.toolName.lower()
+    if tool_name_lower in (t.lower() for t in policy_store.policy.tool_blacklist):
         ws_payload = {
             "request_id": request_id,
             "hook": envelope.hook,
@@ -69,6 +89,23 @@ async def receive_command(envelope: WebhookEnvelope):
     # --- Compute risk score ---
     risk = compute_risk(command_str)
 
+    # --- Blacklist hit from word matching: also block immediately ---
+    if risk.blacklist_hit:
+        ws_payload = {
+            "request_id": request_id,
+            "hook": envelope.hook,
+            "tool_name": event.toolName,
+            "input": event.input,
+            "risk_score": risk.score,
+            "flagged": True,
+            "needs_approval": False,
+            "status": "blocked",
+            "matched_patterns": risk.matched_patterns,
+            "blacklist_hit": True,
+        }
+        await command_queue.put(ws_payload)
+        return ApprovalResponse(approve=False, reason="Command matches a blacklisted word")
+
     ws_payload = {
         "request_id": request_id,
         "hook": envelope.hook,
@@ -79,7 +116,7 @@ async def receive_command(envelope: WebhookEnvelope):
         "needs_approval": risk.flagged,
         "status": "pending" if risk.flagged else "approved",
         "matched_patterns": risk.matched_patterns,
-        "blacklist_hit": risk.blacklist_hit,
+        "blacklist_hit": False,
         "llm_consulted": risk.llm_consulted,
         "llm_score": risk.llm_score,
     }

@@ -33,7 +33,10 @@ function NavBar() {
     return (
         <>
             <div id="nav-bar">
-                <h1 id="nav-bar-title">Claw Jail</h1>
+                <h1 id="nav-bar-title">
+                    <img src="/claw-jail-favicon.png" alt="Claw Jail" id="nav-bar-logo" />
+                    Claw Jail
+                </h1>
                 <div id="nav-bar-controls">
                     <button
                         ref={themeBtnRef}

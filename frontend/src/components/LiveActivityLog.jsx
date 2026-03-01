@@ -141,7 +141,29 @@ function LiveActivityLog() {
 
     const formatInput = (input) => {
         if (!input) return '';
-        return Object.entries(input).map(([k, v]) => `${k}: ${v}`).join(', ');
+        return Object.entries(input)
+            .map(([k, v]) => {
+                if (v === null || v === undefined) return `${k}: (empty)`;
+                if (typeof v === 'object') return `${k}: ${JSON.stringify(v)}`;
+                return `${k}: ${v}`;
+            })
+            .join(', ');
+    };
+
+    const formatCommand = (input) => {
+        if (!input || typeof input !== 'object') return null;
+        const entries = Object.entries(input);
+        if (entries.length === 0) return null;
+
+        // Show ALL key-value pairs, serialising complex values with JSON.stringify
+        return entries
+            .map(([k, v]) => {
+                if (v === null || v === undefined) return null;
+                if (typeof v === 'object') return `${k}: ${JSON.stringify(v)}`;
+                return `${k}: ${v}`;
+            })
+            .filter(Boolean)
+            .join('\n');
     };
 
     return (
@@ -160,10 +182,12 @@ function LiveActivityLog() {
                 {logs.map(log => (
                     <div key={log.request_id} className={getEntryClass(log)}>
                         <span className="log-time">{log.timestamp}</span>
-                        <span className="log-action">
+                        <div className="log-action">
                             <strong>{log.tool_name}</strong>
-                            {log.input && <span className="log-input"> — {formatInput(log.input)}</span>}
-                        </span>
+                            {log.input && formatCommand(log.input) && (
+                                <div className="log-command">{formatCommand(log.input)}</div>
+                            )}
+                        </div>
 
                         <div className="log-controls">
                             {log.needs_approval && log.status === 'pending' && (

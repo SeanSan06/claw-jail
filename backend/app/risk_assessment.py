@@ -13,9 +13,9 @@ from app.models import RiskResult, SecurityPolicy
 
 load_dotenv()
 
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_API_URL = os.getenv("LLM_API_URL", "https://api.openai.com/v1/chat/completions")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+LLM_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+LLM_MODEL = "stepfun/step-3.5-flash:free"
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT_S", "10"))
 
 RISK_PATTERNS: list[tuple[str, str, int | str]] = [
@@ -134,14 +134,17 @@ def compute_risk(command: str) -> RiskResult:
     cmd_lower = cmd.lower()
 
     for word in policy.word_blacklist:
-        if re.search(r"\b" + re.escape(word) + r"\b", cmd_lower):
+        # Use substring match — in a security context, false positives are
+        # preferable to false negatives.  "apple" blocks "apple.txt",
+        # "apple_pie", "apple-sauce", etc.
+        if word in cmd_lower:
             score = 100
             blacklist_hit = True
             break
 
     if not blacklist_hit:
         for tool in policy.tool_blacklist:
-            if re.search(r"\b" + re.escape(tool) + r"\b", cmd_lower):
+            if tool.lower() in cmd_lower:
                 score = 100
                 blacklist_hit = True
                 break

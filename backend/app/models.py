@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class SecurityPolicy(BaseModel):
@@ -27,12 +27,25 @@ class RiskResult(BaseModel):
 # --- OpenClaw webhook envelope models ---
 
 class ToolCallEvent(BaseModel):
-    """The 'event' payload inside a before_tool_call envelope."""
+    """The 'event' payload inside a before_tool_call envelope.
+
+    OpenClaw SDK sends `params`; the plugin normalises it to `input`,
+    but we accept both field names as a safety net.
+    """
     toolName: str
     input: dict | None = None
 
     class Config:
         extra = "allow"  # pass through any extra fields from OpenClaw
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalise_params(cls, data):
+        """Accept ``params`` as an alias for ``input``."""
+        if isinstance(data, dict):
+            if "params" in data and "input" not in data:
+                data["input"] = data.pop("params")
+        return data
 
 
 class WebhookEnvelope(BaseModel):

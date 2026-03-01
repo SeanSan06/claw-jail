@@ -82,3 +82,20 @@ class SecurityStatus(BaseModel):
     profile: SecurityProfile
     total_blocked: int = 0
     total_allowed: int = 0
+
+# ---------------------------------------------------------------------------
+# Activity Log Models
+# ---------------------------------------------------------------------------
+
+class LogEntry(BaseModel):
+    """A single log entry for activity tracking."""
+    id: int
+    timestamp: str = Field(..., description="Timestamp in HH:MM:SS format")
+    action: str = Field(..., description="The command or action performed")
+    risk: str = Field(..., description="Risk level: low, medium, or high")
+
+
+class LogResponse(BaseModel):
+    """Response containing a list of log entries."""
+    logs: list[LogEntry]
+    total: int

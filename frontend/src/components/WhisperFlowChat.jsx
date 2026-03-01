@@ -114,27 +114,22 @@ function WhisperFlowChat() {
 
     const handleSend = async () => {
         if (input.trim()) {
-            console.log("User clicked send! Final text:", input);
+            const userText = input.trim();
+            console.log("User submitted text:", userText);
             
-            // Add user message to chat history
-            const userMessage = {
-                id: Date.now(),
-                text: input,
-                sender: 'user',
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            const updatedMessages = [...messages, userMessage];
-            setMessages(updatedMessages);
+            // Clear input and status right away for a snappy UI
             setInput('');
             setStatusMsg('');
-            
-            // Send to backend and get response
+            setIsProcessing(true);
+
             try {
-                setIsProcessing(true);
-                const response = await fetch('http://localhost:8000/api/logs/send', {
+                // Send the text payload to our new endpoint
+                const response = await fetch('http://localhost:8000/api/text-command', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: input })
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: userText }),
                 });
 
                 if (!response.ok) {
@@ -142,28 +137,19 @@ function WhisperFlowChat() {
                 }
 
                 const data = await response.json();
-                console.log("Backend response:", data);
-
-                // Add assistant message to chat
-                const assistantMessage = {
-                    id: Date.now() + 1,
-                    text: data.response || data.message || "Command processed",
-                    sender: 'assistant',
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                };
-                setMessages([...updatedMessages, assistantMessage]);
-            } catch (error) {
-                console.error("Error sending message:", error);
-                setStatusMsg("Error: Could not connect to backend.");
+                console.log("Backend Text Result:", data);
                 
-                // Add error message to chat
-                const errorMessage = {
-                    id: Date.now() + 1,
-                    text: "❌ Error: Could not connect to backend. Is uvicorn running?",
-                    sender: 'assistant',
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                };
-                setMessages([...updatedMessages, errorMessage]);
+                if (data.status === 'success') {
+                    // Hey teammates! Pass data.command to the bot agent here!
+                    console.log("🔥 Fuzzy matched command:", data.command);
+                    setStatusMsg(`Command recognized: ${data.command} (Confidence: ${data.confidence}%)`);
+                } else {
+                    setStatusMsg(`Unrecognized command: "${data.original_text}". Try again.`);
+                }
+                
+            } catch (error) {
+                console.error("Failed to send text to backend:", error);
+                setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
             } finally {
                 setIsProcessing(false);
             }

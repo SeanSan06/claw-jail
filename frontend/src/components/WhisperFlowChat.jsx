@@ -3,22 +3,19 @@ import { useState, useRef } from 'react';
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
     const [isListening, setIsListening] = useState(false);
-    // NEW: We added a processing state so you know when the AI is thinking!
     const [isProcessing, setIsProcessing] = useState(false); 
+    const [statusMsg, setStatusMsg] = useState(''); // NEW: Dedicated status/error message state
     
-    const textareaRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
 
     const handleInputChange = (e) => {
         setInput(e.target.value);
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
-        }
+        setStatusMsg(''); // Clear any errors when user starts typing
     };
 
     const startRecording = async () => {
+        setStatusMsg(''); // Clear previous messages
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorderRef.current = new MediaRecorder(stream);
@@ -29,7 +26,7 @@ function WhisperFlowChat() {
             };
 
             mediaRecorderRef.current.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+                const audioBlob = new Blob(audioChunksRef.current);
                 await sendAudioToBackend(audioBlob);
             };
 
@@ -37,6 +34,7 @@ function WhisperFlowChat() {
             setIsListening(true);
         } catch (err) {
             console.error("Error accessing microphone:", err);
+            setStatusMsg('Microphone access denied or unavailable.');
             setIsListening(false);
         }
     };
@@ -58,9 +56,9 @@ function WhisperFlowChat() {
     };
 
     const sendAudioToBackend = async (blob) => {
-        setIsProcessing(true); // Tell the UI we are thinking...
+        setIsProcessing(true);
         const formData = new FormData();
-        formData.append('file', blob, 'command.wav');
+        formData.append('file', blob, 'command.webm'); 
 
         try {
             const response = await fetch('http://localhost:8000/api/voice-command', {
@@ -68,27 +66,25 @@ function WhisperFlowChat() {
                 body: formData,
             });
 
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
             const data = await response.json();
-            console.log("Backend Result:", data); // Check your browser console to see this!
+            console.log("Backend Result:", data); 
             
-            // Put the translated text directly into the text box
             if (data.transcript) {
                 setInput(data.transcript); 
-                
-                if (textareaRef.current) {
-                    textareaRef.current.style.height = 'auto';
-                    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 72) + 'px';
-                }
+                setStatusMsg(''); // Success, no error message needed
             } else if (data.status === "empty") {
-                // If the room was too noisy and it couldn't hear you
-                setInput("Could not hear you over the noise. Please try again.");
+                setStatusMsg("Could not hear you. Please try again.");
             }
             
         } catch (error) {
             console.error("Upload failed. Is the Python backend running?", error);
-            setInput("Error connecting to backend.");
+            setStatusMsg("Error: Could not connect to backend. Is uvicorn running?");
         } finally {
-            setIsProcessing(false); // Done thinking!
+            setIsProcessing(false);
         }
     };
 
@@ -101,13 +97,10 @@ function WhisperFlowChat() {
             // ---------------------------------------------------------
             
             setInput('');
-            if (textareaRef.current) {
-                textareaRef.current.style.height = 'auto';
-            }
+            setStatusMsg('');
         }
     };
 
-    // Determine what the button should say
     let buttonText = '🎙️ Voice Input';
     if (isProcessing) buttonText = '⏳ Processing...';
     else if (isListening) buttonText = '🛑 Stop Listening';
@@ -118,19 +111,25 @@ function WhisperFlowChat() {
             
             <div id="input-container" style={{ marginTop: 'auto' }}>
                 <textarea
-                    ref={textareaRef}
                     value={input}
                     onChange={handleInputChange}
                     placeholder="Type or speak your command here..."
-                    rows="1"
-                    disabled={isProcessing} // Disable typing while processing
+                    rows="3"
+                    disabled={isProcessing}
                 />
+                
+                {/* NEW: Safe place to show errors without messing up the input box */}
+                {statusMsg && (
+                    <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px' }}>
+                        {statusMsg}
+                    </div>
+                )}
 
-                <div id="button-row">
+                <div id="button-row" style={{ marginTop: '8px' }}>
                     <button 
                         onClick={handleVoiceInput}
                         className={isListening ? 'listening' : ''}
-                        disabled={isProcessing} // Disable mic button while processing
+                        disabled={isProcessing}
                     >
                         {buttonText}
                     </button>

@@ -1,13 +1,20 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 function WhisperFlowChat() {
     const [input, setInput] = useState('');
+    const [messages, setMessages] = useState([]);
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false); 
     const [statusMsg, setStatusMsg] = useState(''); 
     
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
+    const messagesEndRef = useRef(null);
+
+    // Auto-scroll to latest message
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const handleInputChange = (e) => {
         setInput(e.target.value);
@@ -105,16 +112,61 @@ function WhisperFlowChat() {
         }
     };
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (input.trim()) {
             console.log("User clicked send! Final text:", input);
             
-            // ---------------------------------------------------------
-            // Hey teammates! Pass the 'input' variable to the bot agent here!
-            // ---------------------------------------------------------
-            
+            // Add user message to chat history
+            const userMessage = {
+                id: Date.now(),
+                text: input,
+                sender: 'user',
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            const updatedMessages = [...messages, userMessage];
+            setMessages(updatedMessages);
             setInput('');
             setStatusMsg('');
+            
+            // Send to backend and get response
+            try {
+                setIsProcessing(true);
+                const response = await fetch('http://localhost:8000/api/logs/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: input })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Backend response:", data);
+
+                // Add assistant message to chat
+                const assistantMessage = {
+                    id: Date.now() + 1,
+                    text: data.response || data.message || "Command processed",
+                    sender: 'assistant',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages([...updatedMessages, assistantMessage]);
+            } catch (error) {
+                console.error("Error sending message:", error);
+                setStatusMsg("Error: Could not connect to backend.");
+                
+                // Add error message to chat
+                const errorMessage = {
+                    id: Date.now() + 1,
+                    text: "❌ Error: Could not connect to backend. Is uvicorn running?",
+                    sender: 'assistant',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages([...updatedMessages, errorMessage]);
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 
@@ -126,7 +178,24 @@ function WhisperFlowChat() {
         <div id="whisper-flow-chat-area">
             <h2>Whisper Flow Chat</h2>
             
-            <div id="input-container" style={{ marginTop: 'auto' }}>
+            {/* Chat display area */}
+            <div id="chat-messages-container">
+                {messages.length === 0 ? (
+                    <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>
+                        Start a conversation...
+                    </div>
+                ) : (
+                    messages.map((msg) => (
+                        <div key={msg.id} className={`chat-message ${msg.sender}`}>
+                            <div className="message-content">{msg.text}</div>
+                            <div className="message-time">{msg.timestamp}</div>
+                        </div>
+                    ))
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+            
+            <div id="input-container">
                 <textarea
                     value={input}
                     onChange={handleInputChange}

@@ -54,6 +54,36 @@ async def get_logs():
     return LogResponse(logs=ACTIVITY_LOGS, total=len(ACTIVITY_LOGS))
 
 
+@router.post("/logs/send")
+async def send_command(payload: dict):
+    """
+    Send a command to be processed and logged.
+    
+    Parameters:
+    - command: The command text from the user
+    
+    This endpoint receives user input, logs it, and returns a response.
+    """
+    command = payload.get("command", "")
+    if not command:
+        raise HTTPException(status_code=400, detail="No command provided")
+    
+    # Add the command as a log entry
+    new_log = LogEntry(
+        id=len(ACTIVITY_LOGS) + 1,
+        timestamp=datetime.now().strftime("%H:%M:%S"),
+        action=f"User command: {command}",
+        risk="medium"  # Default to medium, can be adjusted based on analysis
+    )
+    ACTIVITY_LOGS.append(new_log)
+    
+    # TODO: Send to agent for processing
+    # For now, just echo back the command
+    response_text = f"Command received: {command}"
+    
+    return {"response": response_text, "command": command, "log_id": new_log.id}
+
+
 @router.post("/logs/add")
 async def add_log(action: str, risk: str):
     """

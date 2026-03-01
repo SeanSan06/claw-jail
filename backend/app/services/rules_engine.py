@@ -18,6 +18,8 @@ from app.schemas.security import (
     SecurityRule,
     ShimVerdict,
 )
+from app.services.ollama_assessor import assess_with_ollama
+from app.core.config import settings
 
 
 # ---------------------------------------------------------------------------
@@ -231,6 +233,21 @@ class RulesEngine:
         # Phase 1: Compute heuristic score
         confidence_score = _compute_heuristic_score(command)
 
+        # Default assessment source/reason for Phase 1
+        assessment_source = "heuristic"
+        assessor_reason = None
+
+        # Phase 2 (optional): consult local distilled assessor for non-trivial commands
+        if settings.use_distilled_assessor and confidence_score > 1:
+            assessor_result = assess_with_ollama(command)
+            try:
+                confidence_score = int(assessor_result.get("score", confidence_score))
+            except Exception:
+                # keep heuristic score on parse errors
+                pass
+            assessment_source = assessor_result.get("assessment_source", "distilled_ai")
+            assessor_reason = assessor_result.get("reason")
+
         for rule in profile.rules:
             if self._matches(rule, command):
                 verdict = ShimVerdict(
@@ -240,21 +257,22 @@ class RulesEngine:
                     matched_rule=rule.name,
                     reason=rule.description or f"Blocked by rule: {rule.name}",
                     confidence_score=confidence_score,
-                    assessment_source="heuristic",
+                    assessment_source=assessment_source,
                 )
                 self._total_blocked += 1
                 self._audit_log.append(verdict)
                 return verdict
 
         # No rule matched → allow
+        final_reason = assessor_reason or "No blocking rule matched."
         verdict = ShimVerdict(
             allowed=True,
             command=command,
             mode=self._active_mode,
             matched_rule=None,
-            reason="No blocking rule matched.",
+            reason=final_reason,
             confidence_score=confidence_score,
-            assessment_source="heuristic",
+            assessment_source=assessment_source,
         )
         self._total_allowed += 1
         self._audit_log.append(verdict)

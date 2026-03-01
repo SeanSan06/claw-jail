@@ -26,30 +26,6 @@
     flex-shrink: 0;
 }
 
-#refresh-btn,
-#settings-btn {
-    background: var(--button-bg);
-    color: var(--text-primary);
-    border: 1px solid var(--button-border);
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-#refresh-btn:hover,
-#settings-btn:hover {
-    background: var(--button-hover-bg);
-    border-color: var(--text-secondary);
-}
-
-#refresh-btn:active,
-#settings-btn:active {
-    background: var(--button-active-bg);
-}
-
 #system-status {
     display: flex;
     align-items: center;

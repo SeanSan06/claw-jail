@@ -96,3 +96,16 @@ deactivate
 ```
 
 ---
+
+## Git ignored folders/files
+
+This repository intentionally does **not** track local environments, caches, or installed dependency folders.
+
+- Python virtual environments (for example: `fastapi-env/`, `venv/`, `.venv/`, `backend/venv/`)
+- Python caches (`__pycache__/`, `*.pyc`)
+- Node dependency folders (`node_modules/`, `frontend/node_modules/`)
+- Frontend build output (`frontend/dist/`, `frontend/dist-ssr/`)
+
+If these folders/files appear in Git, remove them from tracking and commit the cleanup before pushing.
+
+---

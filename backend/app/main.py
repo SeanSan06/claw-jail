@@ -1,21 +1,29 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # <-- ADD THIS
-from app.api import router as api_router
-from app.core.config import settings
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title=settings.app_name)
+from app.api.routes import router as routes_router
+from app.api.websocket import router as ws_router, _queue_consumer
 
-# ALLOW REACT TO TALK TO FASTAPI
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    task = asyncio.create_task(_queue_consumer())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="Claw Jail", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In development, this is fine
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(api_router, prefix="/api")
-
-@app.get("/")
-async def root():
-    return {"message": settings.app_name}
+app.include_router(routes_router)
+app.include_router(ws_router)

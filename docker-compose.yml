@@ -1,12 +1,8 @@
 services:
   openclaw:
     build: plugin
-    # Allow the OpenClaw plugin to access the host machine's network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
-      - TOOL_CALL_WEBHOOK_URL=http://host.docker.internal:4000
-    ####
+      - TOOL_CALL_WEBHOOK_URL=http://backend:8000/commands
     ports:
       - "127.0.0.1:18789:18789"
     env_file:

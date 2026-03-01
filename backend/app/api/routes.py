@@ -5,6 +5,10 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
 from thefuzz import process, fuzz
 from app.schemas.security import LogEntry, LogResponse
+from pydantic import BaseModel
+
+class TextInput(BaseModel):
+    text: str
 
 router = APIRouter()
 
@@ -183,3 +187,37 @@ async def handle_voice_command(file: UploadFile = File(...)):
         # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
+
+    @router.post("/text-command")
+    async def handle_text_command(payload: TextInput):
+        """
+        Receives raw text from the React frontend
+        and uses Fuzzy Logic to find the best matching command.
+        """
+        input_text = payload.text.lower().strip()
+        
+        if not input_text:
+            return {"status": "empty", "message": "No text provided."}
+
+        # FUZZY INTERPRETATION (Reusing your existing logic)
+        choices = list(COMMAND_MAP.keys())
+        result = process.extractOne(input_text, choices, scorer=fuzz.token_set_ratio)
+        
+        if result:
+            best_match, score = result
+            if score >= 80:
+                found_command = COMMAND_MAP[best_match]
+                return {
+                    "status": "success",
+                    "command": found_command,
+                    "original_text": input_text,
+                    "confidence": score,
+                    "message": f"Command '{best_match}' recognized."
+                }
+
+        # UNCERTAIN FALLBACK
+        return {
+            "status": "uncertain",
+            "original_text": input_text,
+            "message": f"'{input_text}' isn't a recognized command."
+        }

@@ -1,6 +1,6 @@
 # Claw-Jail 🔒
 
-A real-time security middleware dashboard for monitoring and controlling what ClawBot does on your system.
+A real-time security middleware dashboard for monitoring and controlling what OpenClaw does on your system.
 
 ![Dashboard Screenshot](./frontend/src/assets/dashboard-example.png)
 
@@ -8,22 +8,22 @@ A real-time security middleware dashboard for monitoring and controlling what Cl
 
 Claw-Jail operates as a security middleware layer between the AI agent and the host system. It acts as a digital "black box" that monitors an AI's internal chain of thought and planned actions in real-time. Through a live dashboard, it ensures the agent never executes malicious commands or exceeds its authorization without oversight.
 
-- **Keyword Watchlist** — Input specific keywords or phrases to monitor. Any matching action is automatically flagged.
-- **Risk Scoring** — Every tool ClawBot attempts to run is instantly assigned a risk score from 1–100.
-- **Threshold Slider** — Set your security tolerance. If an action's risk score exceeds the threshold, ClawBot is paused and the user must manually approve or reject it.
-- **Human-in-the-Loop** — A definitive safety gate before ClawBot is permitted to continue its task.
-- **Light/Dark Mode** — Clean dashboard with theme toggle.
+- **Keyword Watchlist:** Input specific keywords or phrases to monitor. Any matching action is automatically flagged.
+- **Risk Scoring:** Every tool OpenClaw attempts to run is instantly assigned a risk score from 1–100.
+- **Threshold Slider:** Set your security tolerance. If an action's risk score exceeds the threshold, OpenClaw's execution is paused and the user must manually approve or reject it the current tool that the agent is attempting to run.
+- **Human-in-the-Loop:** A definitive safety gate before OpenClaw is permitted to continue its task.
+- **Light, Cream, and Dark Mode:** Clean dashboard with theme selection.
 
 ---
 
 ## How It Works (The Security Pipeline)
 
-1. **OpenClaw Interface** — The React-based UI where users issue commands like "fix this bug" or "run this command."
-2. **Gateway (Middleman)** — Intercepts all commands and manages flow between the UI and the underlying agent.
-3. **Agent (OpenClaw)** — Receives instructions from the gateway and asks the LLM to generate the logic behind the command.
-4. **Pluggin (The Jail)** — Before the agent executes any logic, the pluggin captures the tool and runs it againsts the risk checker. If it goes above the threshold it lets the users aprove or reject the tool within the log area. This allows the user to decide if OpenClaw should run it or not.
-5. **Security Dashboard** — The FastAPI backend pushes every intended action to the dashboard, which logs it, scores it, and applies security rules. The user such as an IT Manager oversees this process and can modify rules as needed.
-6. **Bash Terminal** — Only after passing the gateway and human-governed security rules does the action reach the terminal for final execution.
+1. **OpenClaw Interface:** The React-based UI where users issue commands like "fix this bug", "run this command", or "create hello_world.txt" for example.
+2. **Gateway (Middleman):** Intercepts all commands and manages flow between the UI and the underlying agent.
+3. **Agent (OpenClaw):** Receives instructions from the gateway and asks the LLM to generate the logic behind the command.
+4. **Pluggin (The Jail):** Before the agent executes any logic, the pluggin captures the tool and runs it against the risk checker. If it goes above the threshold, it lets the users approve or reject the tool within the log area. This allows the user to decide if OpenClaw should run it or not.
+5. **Security Dashboard:** The FastAPI backend pushes every intended action to the dashboard, which logs it, scores it, and applies security rules. The user, such as an IT Manager, oversees this process and can modify rules as needed.
+6. **Bash Terminal:** Only after passing the gateway and human-governed security rules does the action reach the terminal for final execution.
 
 ---
 
@@ -34,7 +34,7 @@ Claw-Jail operates as a security middleware layer between the AI agent and the h
 | Frontend | React + Vite |
 | Backend | Python + FastAPI |
 | Infrastructure | Docker + GitHub Actions (CI) |
-| AI Agent | ClawBot |
+| AI Agent | OpenClaw |
 | Voice Input | Wispr Flow |
 | Risk Assessment | Gemini 1.5 Flash |
 | Real-Time Comms | WebSockets |
@@ -43,7 +43,7 @@ Claw-Jail operates as a security middleware layer between the AI agent and the h
 
 ## Challenges
 
-- **Intercepting agent internals** is hard! Our first proxy/shim approach failed because raw commands to ClawBot's internal LLM weren't visible and documentation was sparse. We pivoted to a **custom log-interception plugin** that hooks directly into the tool-execution pipeline, capturing intent before it becomes action.
+- **Intercepting agent internals** is hard! Our first proxy/shim approach failed because raw commands to OpenClaw's internal LLM weren't visible, and documentation was sparse. We pivoted to a **custom log-interception plugin** that hooks directly into the tool-execution pipeline, capturing intent before it becomes action.
 - **Real-time data transfer** required learning and implementing WebSockets to maintain a persistent connection between the frontend and backend.
 
 ---
@@ -176,5 +176,9 @@ git commit -m "remove ignored files from tracking"
 
 - Polish the dashboard with more monitoring components
 - Add more granular security rules per tool type
-- Allow for wider range of commands to be inputed
-- Add more modes/presets
+- Allow for a wider range of commands to be inputed
+- Add a settings area with more modes/presets
+- Use a strong voice detection model
+- More accessibility features
+  - Color blind users
+  - Near-sighted users
